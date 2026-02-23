@@ -33,12 +33,12 @@ void CarbonatedToggle::updateLabel()
     if (carbonatedButton.getToggleState())
     {
         statusLabel.setText ("CARBONATED", juce::dontSendNotification);
-        statusLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
+        statusLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getTextHighlight());
     }
     else
     {
         statusLabel.setText ("FLAT", juce::dontSendNotification);
-        statusLabel.setColour (juce::Label::textColourId, SodaColors::textSecondary);
+        statusLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getTextSecondary());
     }
 }
 

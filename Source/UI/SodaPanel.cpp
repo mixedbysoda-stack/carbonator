@@ -16,13 +16,13 @@ void SodaPanel::paint (juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Footer section with semi-transparent white/pink background
+    // Footer section (theme-aware background)
     auto footerBounds = bounds.removeFromBottom (90);
-    g.setColour (juce::Colours::white.withAlpha (0.5f));
+    g.setColour (SodaColors::Theme::getFooterBackground());
     g.fillRect (footerBounds);
 
     // Top border for footer
-    g.setColour (juce::Colour (0xffff3b30).withAlpha (0.2f));
+    g.setColour (SodaColors::Theme::getBorder().withAlpha (0.2f));
     g.drawHorizontalLine (footerBounds.getY(), static_cast<float>(footerBounds.getX()),
                           static_cast<float>(footerBounds.getRight()));
 }

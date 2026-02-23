@@ -24,6 +24,11 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
     subtitleLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
     addAndMakeVisible (subtitleLabel);
 
+    // Setup theme toggle button
+    themeToggleButton.setButtonText ("☀");  // Sun emoji for light mode
+    themeToggleButton.onClick = [this]() { toggleTheme(); };
+    addAndMakeVisible (themeToggleButton);
+
     // Add main panel
     addAndMakeVisible (sodaPanel);
 
@@ -96,8 +101,8 @@ juce::Colour SodaFilterAudioProcessorEditor::getBubbleColor()
 
     switch (flavorIndex)
     {
-        case 0:  // Cherry - Red
-            return juce::Colour (0xffff3b30);
+        case 0:  // Cherry - Super bright red
+            return juce::Colour (0xffff0040);  // Hot pink-red, super vibrant
 
         case 1:  // Grape - Purple
             return juce::Colour (0xff9b59b6);
@@ -106,7 +111,7 @@ juce::Colour SodaFilterAudioProcessorEditor::getBubbleColor()
             return juce::Colour (0xff6a0dad);
 
         default:
-            return juce::Colour (0xffff3b30);
+            return juce::Colour (0xffff0040);
     }
 }
 
@@ -134,12 +139,12 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Main cream background
-    g.fillAll (SodaColors::sodaCream);
+    // Main background (theme-aware)
+    g.fillAll (SodaColors::Theme::getBackground());
 
-    // Red border (rounded rectangle, 8px thick)
+    // Border (theme-aware, rounded rectangle, 8px thick)
     auto borderBounds = bounds.reduced (4.0f);
-    g.setColour (SodaColors::sodaRed);
+    g.setColour (SodaColors::Theme::getBorder());
     g.drawRoundedRectangle (borderBounds, 32.0f, 8.0f);
 
     // Get FIZZ value for liquid fill effect
@@ -156,7 +161,7 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
         innerBounds.getWidth(),
         liquidHeight
     );
-    g.setColour (SodaColors::sodaRed.withAlpha (0.1f));
+    g.setColour (SodaColors::Theme::getLiquidFill());
     g.fillRect (liquidBounds);
 
     // Draw bubbles (only if carbonated)
@@ -221,19 +226,40 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
     g.addTransform (juce::AffineTransform::rotation (-0.035f, titleBounds.getCentreX(), titleBounds.getCentreY()));
 
     // Badge shadow
-    g.setColour (juce::Colours::black.withAlpha (0.2f));
+    g.setColour (juce::Colours::black.withAlpha (0.3f));
     g.fillRoundedRectangle (titleBounds.translated (0.0f, 3.0f), 25.0f);
 
-    // Badge background
-    g.setColour (SodaColors::sodaRed);
+    // Badge background (theme-aware)
+    g.setColour (SodaColors::Theme::getBorder());
     g.fillRoundedRectangle (titleBounds, 25.0f);
 
     g.restoreState();
 }
 
+void SodaFilterAudioProcessorEditor::toggleTheme()
+{
+    // Toggle theme
+    SodaColors::Theme::currentTheme =
+        (SodaColors::Theme::currentTheme == ThemeType::Light) ?
+        ThemeType::Dark : ThemeType::Light;
+
+    // Update button text
+    themeToggleButton.setButtonText (
+        SodaColors::Theme::currentTheme == ThemeType::Light ? "☀" : "☾"
+    );
+
+    // Repaint everything
+    repaint();
+    sodaPanel.repaint();
+}
+
 void SodaFilterAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (20);
+
+    // Theme toggle button (top-right corner)
+    auto toggleBounds = juce::Rectangle<int> (bounds.getRight() - 40, bounds.getY() + 5, 35, 35);
+    themeToggleButton.setBounds (toggleBounds);
 
     // Title badge (positioned manually in paint)
     titleLabel.setBounds (bounds.getX(), 35, bounds.getWidth(), 40);

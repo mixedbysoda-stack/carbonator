@@ -36,6 +36,10 @@ private:
     juce::Label titleLabel;
     juce::Label subtitleLabel;
 
+    // Theme toggle button
+    juce::TextButton themeToggleButton;
+    void toggleTheme();
+
     // Bubble animation
     struct Bubble
     {

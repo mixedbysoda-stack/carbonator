@@ -19,6 +19,7 @@ set(SOURCE_FILES
     Source/DSP/EffectsChain.cpp
     Source/DSP/LowPassFilter.cpp
     Source/DSP/FlavorProcessor.cpp
+    Source/UI/LookAndFeel/ColorScheme.cpp
     Source/UI/LookAndFeel/SodaLookAndFeel.cpp
     Source/UI/Components/FizzKnob.cpp
     Source/UI/Components/FlavorSelector.cpp

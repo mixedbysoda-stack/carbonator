@@ -5,18 +5,16 @@
 FlavorSelector::FlavorSelector (juce::AudioProcessorValueTreeState& apvts)
     : apvts (apvts)
 {
-    // Setup title label (small, uppercase)
+    // Setup title label (small, uppercase) - will update color on paint
     titleLabel.setText ("FLAVOR", juce::dontSendNotification);
     titleLabel.setFont (juce::Font (10.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centredLeft);
-    titleLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed.withAlpha (0.6f));
     addAndMakeVisible (titleLabel);
 
-    // Setup large flavor name label
+    // Setup large flavor name label - will update color on paint
     flavorLabel.setText ("CHERRY", juce::dontSendNotification);
     flavorLabel.setFont (juce::Font (20.0f, juce::Font::bold));
     flavorLabel.setJustificationType (juce::Justification::centredLeft);
-    flavorLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
     addAndMakeVisible (flavorLabel);
 
     // Setup combo box (hidden, but functional for parameter control)
@@ -52,6 +50,12 @@ void FlavorSelector::updateFlavorLabel()
 void FlavorSelector::paint (juce::Graphics& g)
 {
     juce::ignoreUnused (g);
+
+    // Update label colors based on theme
+    titleLabel.setColour (juce::Label::textColourId,
+        SodaColors::Theme::getTextHighlight().withAlpha (0.6f));
+    flavorLabel.setColour (juce::Label::textColourId,
+        SodaColors::Theme::getTextHighlight());
 }
 
 void FlavorSelector::resized()

@@ -23,21 +23,21 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
     auto centerX = bounds.getCentreX();
     auto centerY = bounds.getCentreY();
 
-    // Dark navy outer circle (#0d0221)
-    g.setColour (juce::Colour (0xff0d0221));
+    // Outer circle (theme-aware)
+    g.setColour (SodaColors::Theme::getKnobBody());
     g.fillEllipse (bounds);
 
-    // Border (#2d1b4e)
-    g.setColour (juce::Colour (0xff2d1b4e));
+    // Border (theme-aware)
+    g.setColour (SodaColors::Theme::getKnobBorder());
     g.drawEllipse (bounds, 2.0f);
 
-    // Inner circle (#1a0a2e) - 50% size
+    // Inner circle (theme-aware) - 50% size
     auto innerBounds = bounds.reduced (bounds.getWidth() * 0.25f);
-    g.setColour (juce::Colour (0xff1a0a2e));
+    g.setColour (SodaColors::Theme::getKnobInner());
     g.fillEllipse (innerBounds);
 
     // Inner circle border
-    g.setColour (juce::Colour (0xff2d1b4e));
+    g.setColour (SodaColors::Theme::getKnobBorder());
     g.drawEllipse (innerBounds, 1.0f);
 
     // Calculate rotation angle (-135° to +135°, 270° total range)
@@ -55,12 +55,13 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
                                                  indicatorEndX, indicatorEndY),
                              4.0f);
 
-    // Red indicator with glow
-    g.setColour (SodaColors::sodaRed);
+    // Indicator with glow (theme-aware)
+    auto indicatorColor = SodaColors::Theme::getBorder();
+    g.setColour (indicatorColor);
     g.fillPath (indicator);
 
     // Add glow effect
-    g.setColour (SodaColors::sodaRed.withAlpha (0.5f));
+    g.setColour (indicatorColor.withAlpha (0.5f));
     g.fillPath (indicator);
 }
 
@@ -101,37 +102,39 @@ void SodaLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton& b
     auto bounds = button.getLocalBounds().toFloat();
     bool isOn = button.getToggleState();
 
-    // Vertical rocker switch body (dark navy #0d0221)
+    // Vertical rocker switch body (theme-aware)
     auto switchBounds = bounds.reduced (2.0f);
-    g.setColour (juce::Colour (0xff0d0221));
+    g.setColour (SodaColors::Theme::getKnobBody());
     g.fillRoundedRectangle (switchBounds, 2.0f);
 
-    // Border (#2d1b4e)
-    g.setColour (juce::Colour (0xff2d1b4e));
+    // Border (theme-aware)
+    g.setColour (SodaColors::Theme::getKnobBorder());
     g.drawRoundedRectangle (switchBounds, 2.0f, 2.0f);
 
-    // Inner area (#1a0a2e)
+    // Inner area (theme-aware)
     auto innerBounds = switchBounds.reduced (4.0f);
-    g.setColour (juce::Colour (0xff1a0a2e));
+    g.setColour (SodaColors::Theme::getKnobInner());
     g.fillRoundedRectangle (innerBounds, 1.0f);
 
-    // LED indicator at top (red when ON)
+    // LED indicator at top (theme-aware color when ON)
     auto ledBounds = innerBounds.removeFromTop (8.0f).reduced (2.0f, 0.0f);
+    auto ledColor = SodaColors::Theme::getBorder();
+
     if (isOn)
     {
-        // Glowing red LED
-        g.setColour (SodaColors::sodaRed);
+        // Glowing LED
+        g.setColour (ledColor);
         g.fillRoundedRectangle (ledBounds, 1.0f);
 
         // Glow effect
-        g.setColour (SodaColors::sodaRed.withAlpha (0.4f));
+        g.setColour (ledColor.withAlpha (0.4f));
         auto glowBounds = ledBounds.expanded (2.0f);
         g.fillRoundedRectangle (glowBounds, 2.0f);
     }
     else
     {
         // Dim LED
-        g.setColour (SodaColors::sodaRed.withAlpha (0.2f));
+        g.setColour (ledColor.withAlpha (0.2f));
         g.fillRoundedRectangle (ledBounds, 1.0f);
     }
 
