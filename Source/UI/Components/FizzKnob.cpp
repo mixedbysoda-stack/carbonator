@@ -72,13 +72,14 @@ void FizzKnob::paint (juce::Graphics& g)
     float pulseIntensity = isInteracting ? 1.0f : 0.4f;
 
     // Draw 3 pulsing rings (theme-aware color)
+    // Start further out so they don't overlap the bottle cap ridges
     auto ringColor = SodaColors::Theme::getPulseRing();
 
     for (int i = 0; i < 3; ++i)
     {
         float ringPhase = pulsePhase + (i * 0.3f);
         float ringSize = std::sin (ringPhase * juce::MathConstants<float>::pi * 2.0f) * 0.5f + 0.5f;
-        float ringRadius = radius + (30.0f + i * 20.0f) * ringSize;
+        float ringRadius = radius + (40.0f + i * 25.0f) * ringSize;  // Start at 40px instead of 30px
         float ringOpacity = (1.0f - ringSize) * 0.3f * pulseIntensity;
 
         g.setColour (ringColor.withAlpha (ringOpacity));
@@ -99,6 +100,7 @@ void FizzKnob::paint (juce::Graphics& g)
     }
 
     // Dashed spinning ring (subtle always-on animation)
+    // Position further out to not overlap bottle cap ridges
     float dashPhase = pulsePhase * 0.5f;
     g.setColour (ringColor.withAlpha (0.15f));
 
@@ -106,10 +108,10 @@ void FizzKnob::paint (juce::Graphics& g)
     for (int i = 0; i < 12; ++i)
     {
         float angle = (i / 12.0f + dashPhase) * juce::MathConstants<float>::twoPi;
-        float x1 = center.x + (radius + 45.0f) * std::cos (angle);
-        float y1 = center.y + (radius + 45.0f) * std::sin (angle);
-        float x2 = center.x + (radius + 55.0f) * std::cos (angle);
-        float y2 = center.y + (radius + 55.0f) * std::sin (angle);
+        float x1 = center.x + (radius + 55.0f) * std::cos (angle);  // Start at 55px
+        float y1 = center.y + (radius + 55.0f) * std::sin (angle);
+        float x2 = center.x + (radius + 65.0f) * std::cos (angle);  // End at 65px
+        float y2 = center.y + (radius + 65.0f) * std::sin (angle);
 
         dashedRing.addLineSegment (juce::Line<float> (x1, y1, x2, y2), 2.0f);
     }

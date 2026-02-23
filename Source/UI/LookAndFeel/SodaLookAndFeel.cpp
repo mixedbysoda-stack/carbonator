@@ -18,7 +18,8 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
 {
     juce::ignoreUnused (slider, rotaryStartAngle, rotaryEndAngle);
 
-    auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (10.0f);
+    // Reduce bounds to fit the ridges (they extend outward by ~17% of radius)
+    auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (25.0f);
     auto radius = juce::jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
     auto centerX = bounds.getCentreX();
     auto centerY = bounds.getCentreY();
