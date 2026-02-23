@@ -16,53 +16,112 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
                                        float rotaryStartAngle, float rotaryEndAngle,
                                        juce::Slider& slider)
 {
-    juce::ignoreUnused (slider);
+    juce::ignoreUnused (slider, rotaryStartAngle, rotaryEndAngle);
 
     auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (10.0f);
     auto radius = juce::jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
     auto centerX = bounds.getCentreX();
     auto centerY = bounds.getCentreY();
 
-    // Outer circle (theme-aware)
-    g.setColour (SodaColors::Theme::getKnobBody());
-    g.fillEllipse (bounds);
+    // Calculate full rotation (0-360 degrees for bottle cap)
+    auto rotation = sliderPos * juce::MathConstants<float>::twoPi;
 
-    // Border (theme-aware)
-    g.setColour (SodaColors::Theme::getKnobBorder());
-    g.drawEllipse (bounds, 2.0f);
+    // Get theme-aware colors
+    auto capColor = SodaColors::Theme::getBorder();
 
-    // Inner circle (theme-aware) - 50% size
-    auto innerBounds = bounds.reduced (bounds.getWidth() * 0.25f);
-    g.setColour (SodaColors::Theme::getKnobInner());
-    g.fillEllipse (innerBounds);
+    // Draw scalloped edges (21 ridges like a real bottle cap)
+    const int ridgeCount = 21;
+    for (int i = 0; i < ridgeCount; ++i)
+    {
+        float angle = (i / static_cast<float>(ridgeCount)) * juce::MathConstants<float>::twoPi + rotation;
+        bool isEven = (i % 2) == 0;
 
-    // Inner circle border
-    g.setColour (SodaColors::Theme::getKnobBorder());
-    g.drawEllipse (innerBounds, 1.0f);
+        // Ridge shape (trapezoid)
+        juce::Path ridge;
+        float ridgeWidth = radius * 0.12f;
+        float ridgeHeight = radius * 0.15f;
+        float ridgeRadius = radius * 1.02f;
 
-    // Calculate rotation angle (-135° to +135°, 270° total range)
-    auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+        // Calculate ridge position
+        float x1 = centerX + ridgeRadius * std::cos (angle - ridgeWidth / radius);
+        float y1 = centerY + ridgeRadius * std::sin (angle - ridgeWidth / radius);
+        float x2 = centerX + ridgeRadius * std::cos (angle + ridgeWidth / radius);
+        float y2 = centerY + ridgeRadius * std::sin (angle + ridgeWidth / radius);
 
-    // Draw indicator line (red, from center to edge)
-    auto indicatorLength = radius * 0.4f;  // Shorter line, from center
-    auto indicatorStartX = centerX;
-    auto indicatorStartY = centerY;
-    auto indicatorEndX = centerX + indicatorLength * std::cos (angle - juce::MathConstants<float>::halfPi);
-    auto indicatorEndY = centerY + indicatorLength * std::sin (angle - juce::MathConstants<float>::halfPi);
+        float outerRadius = ridgeRadius + ridgeHeight;
+        float x3 = centerX + outerRadius * std::cos (angle + ridgeWidth / (radius * 1.5f));
+        float y3 = centerY + outerRadius * std::sin (angle + ridgeWidth / (radius * 1.5f));
+        float x4 = centerX + outerRadius * std::cos (angle - ridgeWidth / (radius * 1.5f));
+        float y4 = centerY + outerRadius * std::sin (angle - ridgeWidth / (radius * 1.5f));
 
+        ridge.startNewSubPath (x1, y1);
+        ridge.lineTo (x2, y2);
+        ridge.lineTo (x3, y3);
+        ridge.lineTo (x4, y4);
+        ridge.closeSubPath();
+
+        // Gradient for ridge (lighter on one side for 3D effect)
+        g.setColour (isEven ? capColor : capColor.darker (0.15f));
+        g.fillPath (ridge);
+    }
+
+    // Main bottle cap circle (88% of size)
+    auto capBounds = bounds.reduced (bounds.getWidth() * 0.06f);
+
+    // Radial gradient effect for cap (simulated with concentric circles)
+    for (int i = 10; i >= 0; --i)
+    {
+        float alpha = 0.3f + (i / 10.0f) * 0.7f;
+        float sizeFactor = 1.0f - (i * 0.02f);
+        auto gradientBounds = capBounds.reduced (capBounds.getWidth() * (1.0f - sizeFactor) * 0.5f);
+
+        g.setColour (capColor.withAlpha (alpha));
+        g.fillEllipse (gradientBounds);
+    }
+
+    // Inner grooved ring (shadow)
+    auto grooveBounds = bounds.reduced (bounds.getWidth() * 0.125f);
+    g.setColour (juce::Colours::black.withAlpha (0.3f));
+    g.drawEllipse (grooveBounds, 2.0f);
+
+    // Center logo area (lighter)
+    auto logoBounds = bounds.reduced (bounds.getWidth() * 0.20f);
+    g.setColour (capColor.brighter (0.1f));
+    g.fillEllipse (logoBounds);
+
+    // Inner shadow for depth
+    g.setColour (juce::Colours::black.withAlpha (0.15f));
+    g.drawEllipse (logoBounds.reduced (1.0f), 1.5f);
+
+    // White indicator notch (rectangular, rotates with knob)
     juce::Path indicator;
-    indicator.addLineSegment (juce::Line<float> (indicatorStartX, indicatorStartY,
-                                                 indicatorEndX, indicatorEndY),
-                             4.0f);
+    float notchWidth = radius * 0.12f;
+    float notchHeight = radius * 0.25f;
+    float notchY = -radius * 0.65f;
 
-    // Indicator with glow (theme-aware)
-    auto indicatorColor = SodaColors::Theme::getBorder();
-    g.setColour (indicatorColor);
-    g.fillPath (indicator);
+    juce::AffineTransform transform = juce::AffineTransform::rotation (rotation, centerX, centerY);
 
-    // Add glow effect
-    g.setColour (indicatorColor.withAlpha (0.5f));
-    g.fillPath (indicator);
+    indicator.addRoundedRectangle (
+        centerX - notchWidth / 2.0f,
+        centerY + notchY,
+        notchWidth,
+        notchHeight,
+        3.0f
+    );
+
+    g.setColour (juce::Colours::white.withAlpha (0.95f));
+    g.fillPath (indicator, transform);
+
+    // Notch shadow for depth
+    g.setColour (juce::Colours::black.withAlpha (0.4f));
+    g.strokePath (indicator, juce::PathStrokeType (0.5f), transform);
+
+    // Highlight on top edge
+    g.setColour (juce::Colours::white.withAlpha (0.3f));
+    auto highlightArc = juce::Path();
+    highlightArc.addCentredArc (centerX, centerY, radius * 0.88f, radius * 0.88f,
+                                0.0f, -2.5f, -0.5f, true);
+    g.strokePath (highlightArc, juce::PathStrokeType (2.0f));
 }
 
 void SodaLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height,
