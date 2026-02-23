@@ -5,9 +5,9 @@
 CarbonatedToggle::CarbonatedToggle (juce::AudioProcessorValueTreeState& apvts)
     : apvts (apvts)
 {
-    // Setup status label above toggle
+    // Setup status label above toggle (LARGER for readability)
     statusLabel.setText ("CARBONATED", juce::dontSendNotification);
-    statusLabel.setFont (juce::Font (10.0f, juce::Font::bold));
+    statusLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     statusLabel.setJustificationType (juce::Justification::centred);
     statusLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
     addAndMakeVisible (statusLabel);
@@ -51,10 +51,10 @@ void CarbonatedToggle::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Label on top
-    statusLabel.setBounds (bounds.removeFromTop (16));
+    // Label on top (more space for larger text)
+    statusLabel.setBounds (bounds.removeFromTop (22));
 
-    bounds.removeFromTop (4);  // Gap
+    bounds.removeFromTop (6);  // Bigger gap
 
     // Toggle button below
     carbonatedButton.setBounds (bounds);

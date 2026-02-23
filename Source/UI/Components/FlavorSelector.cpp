@@ -5,15 +5,15 @@
 FlavorSelector::FlavorSelector (juce::AudioProcessorValueTreeState& apvts)
     : apvts (apvts)
 {
-    // Setup title label (small, uppercase) - will update color on paint
+    // Setup title label (LARGER, uppercase)
     titleLabel.setText ("FLAVOR", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (10.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (titleLabel);
 
-    // Setup large flavor name label - will update color on paint
+    // Setup large flavor name label (BIGGER for readability)
     flavorLabel.setText ("CHERRY", juce::dontSendNotification);
-    flavorLabel.setFont (juce::Font (20.0f, juce::Font::bold));
+    flavorLabel.setFont (juce::Font (28.0f, juce::Font::bold));
     flavorLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (flavorLabel);
 
@@ -62,13 +62,13 @@ void FlavorSelector::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Small label at top
-    titleLabel.setBounds (bounds.removeFromTop (16));
+    // Small label at top (more space)
+    titleLabel.setBounds (bounds.removeFromTop (20));
 
-    bounds.removeFromTop (2);  // Gap
+    bounds.removeFromTop (4);  // Slightly bigger gap
 
-    // Large flavor name display
-    flavorLabel.setBounds (bounds.removeFromTop (28));
+    // Large flavor name display (more space for bigger font)
+    flavorLabel.setBounds (bounds.removeFromTop (36));
 
     // ComboBox takes same space (will be styled to look like the label)
     flavorCombo.setBounds (flavorLabel.getBounds());

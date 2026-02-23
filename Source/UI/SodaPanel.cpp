@@ -31,16 +31,16 @@ void SodaPanel::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Footer section (bottom 90px)
-    auto footerBounds = bounds.removeFromBottom (90);
+    // Footer section (bigger to fit larger text - 110px)
+    auto footerBounds = bounds.removeFromBottom (110);
     auto footerContent = footerBounds.reduced (20, 15);
 
     // Flavor on left
     auto flavorBounds = footerContent.removeFromLeft (footerContent.getWidth() / 2);
     flavorSelector.setBounds (flavorBounds.reduced (5, 0));
 
-    // Carbonated toggle on right (vertical rocker - 48x80)
-    auto toggleBounds = footerContent.withSizeKeepingCentre (48, 70);
+    // Carbonated toggle on right (vertical rocker - slightly taller)
+    auto toggleBounds = footerContent.withSizeKeepingCentre (48, 80);
     carbonatedToggle.setBounds (toggleBounds);
 
     // FIZZ knob in center of remaining space

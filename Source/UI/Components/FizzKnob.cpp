@@ -16,15 +16,15 @@ FizzKnob::FizzKnob (juce::AudioProcessorValueTreeState& apvts)
         apvts, fizzAmount.getParamID(), fizzSlider
     );
 
-    // Setup percentage label
-    percentageLabel.setFont (juce::Font (24.0f, juce::Font::bold));
+    // Setup percentage label (LARGER for readability)
+    percentageLabel.setFont (juce::Font (32.0f, juce::Font::bold));
     percentageLabel.setJustificationType (juce::Justification::centred);
     percentageLabel.setColour (juce::Label::textColourId, SodaColors::textPrimary);
     addAndMakeVisible (percentageLabel);
 
-    // Setup title label
+    // Setup title label (LARGER for readability)
     titleLabel.setText ("FIZZ", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (24.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, SodaColors::textSecondary);
     addAndMakeVisible (titleLabel);
@@ -133,14 +133,14 @@ void FizzKnob::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Title at top
-    titleLabel.setBounds (bounds.removeFromTop (30));
+    // Title at top (more space for larger text)
+    titleLabel.setBounds (bounds.removeFromTop (40));
 
     // Large knob in center
-    auto knobSize = juce::jmin (bounds.getWidth(), bounds.getHeight() - 40);
+    auto knobSize = juce::jmin (bounds.getWidth(), bounds.getHeight() - 60);
     auto knobBounds = bounds.removeFromTop (knobSize).withSizeKeepingCentre (knobSize, knobSize);
     fizzSlider.setBounds (knobBounds);
 
-    // Percentage below knob
-    percentageLabel.setBounds (bounds.removeFromTop (40));
+    // Percentage below knob (more space for larger text)
+    percentageLabel.setBounds (bounds.removeFromTop (50));
 }

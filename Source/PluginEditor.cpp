@@ -9,22 +9,22 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
     // Set look and feel
     setLookAndFeel (&sodaLAF);
 
-    // Setup title label (will be drawn as badge in paint())
+    // Setup title label (LARGER for impact)
     titleLabel.setText ("SODA FILTER", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (28.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (36.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, SodaColors::sodaCream);
     titleLabel.setColour (juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     addAndMakeVisible (titleLabel);
 
-    // Setup subtitle label
+    // Setup subtitle label (LARGER for readability)
     subtitleLabel.setText ("VINTAGE CARBONATED AUDIO", juce::dontSendNotification);
-    subtitleLabel.setFont (juce::Font (11.0f, juce::Font::bold));
+    subtitleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     subtitleLabel.setJustificationType (juce::Justification::centred);
     subtitleLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
     addAndMakeVisible (subtitleLabel);
 
-    // Setup theme toggle button
+    // Setup theme toggle button (LARGER icon)
     themeToggleButton.setButtonText ("☀");  // Sun emoji for light mode
     themeToggleButton.onClick = [this]() { toggleTheme(); };
     addAndMakeVisible (themeToggleButton);
@@ -257,8 +257,8 @@ void SodaFilterAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (20);
 
-    // Theme toggle button (top-right corner)
-    auto toggleBounds = juce::Rectangle<int> (bounds.getRight() - 40, bounds.getY() + 5, 35, 35);
+    // Theme toggle button (top-right corner, bigger for easier clicking)
+    auto toggleBounds = juce::Rectangle<int> (bounds.getRight() - 50, bounds.getY() + 5, 45, 45);
     themeToggleButton.setBounds (toggleBounds);
 
     // Title badge (positioned manually in paint)
