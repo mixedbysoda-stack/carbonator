@@ -51,11 +51,13 @@ void CarbonatedToggle::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Label on top (more space for larger text)
+    // Label on top (full width for "CARBONATED" text)
     statusLabel.setBounds (bounds.removeFromTop (22));
 
-    bounds.removeFromTop (6);  // Bigger gap
+    bounds.removeFromTop (6);  // Gap
 
-    // Toggle button below
-    carbonatedButton.setBounds (bounds);
+    // Toggle button below (centered, narrow vertical rocker)
+    auto toggleWidth = 48;  // Vertical rocker stays narrow
+    auto toggleButton = bounds.withSizeKeepingCentre (toggleWidth, bounds.getHeight());
+    carbonatedButton.setBounds (toggleButton);
 }

@@ -39,8 +39,8 @@ void SodaPanel::resized()
     auto flavorBounds = footerContent.removeFromLeft (footerContent.getWidth() / 2);
     flavorSelector.setBounds (flavorBounds.reduced (5, 0));
 
-    // Carbonated toggle on right (vertical rocker - slightly taller)
-    auto toggleBounds = footerContent.withSizeKeepingCentre (48, 80);
+    // Carbonated toggle on right (vertical rocker - WIDER to fit "CARBONATED" text)
+    auto toggleBounds = footerContent.withSizeKeepingCentre (120, 80);  // Increased width from 48 to 120
     carbonatedToggle.setBounds (toggleBounds);
 
     // FIZZ knob in center of remaining space
