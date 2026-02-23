@@ -33,7 +33,7 @@ juce_add_plugin(SodaFilter
     PLUGIN_MANUFACTURER_CODE Mxbs
     PLUGIN_CODE Soda
     FORMATS ${FORMATS}
-    PRODUCT_NAME "Soda Filter"
+    PRODUCT_NAME "carbonator"
 
     # Plugin characteristics
     IS_SYNTH FALSE

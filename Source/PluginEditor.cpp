@@ -10,7 +10,7 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
     setLookAndFeel (&sodaLAF);
 
     // Setup title label (LARGER for impact)
-    titleLabel.setText ("SODA FILTER", juce::dontSendNotification);
+    titleLabel.setText ("carbonator", juce::dontSendNotification);
     titleLabel.setFont (juce::Font (36.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, SodaColors::sodaCream);
