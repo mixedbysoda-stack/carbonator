@@ -19,9 +19,12 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
 
     juce::Label titleLabel;
+    juce::Label flavorLabel;  // Large flavor name display
     juce::ComboBox flavorCombo;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> flavorAttachment;
+
+    void updateFlavorLabel();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FlavorSelector)
 };

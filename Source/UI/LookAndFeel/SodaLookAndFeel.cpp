@@ -23,25 +23,44 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
     auto centerX = bounds.getCentreX();
     auto centerY = bounds.getCentreY();
 
-    // Draw knob body (dark circle)
-    g.setColour (SodaColors::knobBody);
+    // Dark navy outer circle (#0d0221)
+    g.setColour (juce::Colour (0xff0d0221));
     g.fillEllipse (bounds);
 
-    // Draw knob outline (red)
-    g.setColour (SodaColors::border);
+    // Border (#2d1b4e)
+    g.setColour (juce::Colour (0xff2d1b4e));
     g.drawEllipse (bounds, 2.0f);
 
-    // Draw indicator line (red)
+    // Inner circle (#1a0a2e) - 50% size
+    auto innerBounds = bounds.reduced (bounds.getWidth() * 0.25f);
+    g.setColour (juce::Colour (0xff1a0a2e));
+    g.fillEllipse (innerBounds);
+
+    // Inner circle border
+    g.setColour (juce::Colour (0xff2d1b4e));
+    g.drawEllipse (innerBounds, 1.0f);
+
+    // Calculate rotation angle (-135° to +135°, 270° total range)
     auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-    auto lineLength = radius * 0.7f;
+
+    // Draw indicator line (red, from center to edge)
+    auto indicatorLength = radius * 0.4f;  // Shorter line, from center
+    auto indicatorStartX = centerX;
+    auto indicatorStartY = centerY;
+    auto indicatorEndX = centerX + indicatorLength * std::cos (angle - juce::MathConstants<float>::halfPi);
+    auto indicatorEndY = centerY + indicatorLength * std::sin (angle - juce::MathConstants<float>::halfPi);
 
     juce::Path indicator;
-    indicator.addLineSegment (juce::Line<float> (centerX, centerY,
-                                                 centerX + lineLength * std::cos (angle - juce::MathConstants<float>::halfPi),
-                                                 centerY + lineLength * std::sin (angle - juce::MathConstants<float>::halfPi)),
-                             3.0f);
+    indicator.addLineSegment (juce::Line<float> (indicatorStartX, indicatorStartY,
+                                                 indicatorEndX, indicatorEndY),
+                             4.0f);
 
-    g.setColour (SodaColors::knobIndicator);
+    // Red indicator with glow
+    g.setColour (SodaColors::sodaRed);
+    g.fillPath (indicator);
+
+    // Add glow effect
+    g.setColour (SodaColors::sodaRed.withAlpha (0.5f));
     g.fillPath (indicator);
 }
 
@@ -80,28 +99,69 @@ void SodaLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton& b
     juce::ignoreUnused (shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
 
     auto bounds = button.getLocalBounds().toFloat();
-    auto toggleWidth = bounds.getWidth();
-    auto toggleHeight = bounds.getHeight();
+    bool isOn = button.getToggleState();
 
-    // Draw slide toggle background
-    auto trackBounds = bounds.withTrimmedLeft (60.0f).reduced (0.0f, 10.0f);
-    g.setColour (button.getToggleState() ? SodaColors::sodaMint : SodaColors::textSecondary);
-    g.fillRoundedRectangle (trackBounds, trackBounds.getHeight() / 2.0f);
+    // Vertical rocker switch body (dark navy #0d0221)
+    auto switchBounds = bounds.reduced (2.0f);
+    g.setColour (juce::Colour (0xff0d0221));
+    g.fillRoundedRectangle (switchBounds, 2.0f);
 
-    // Draw toggle circle
-    auto circleSize = trackBounds.getHeight() - 4.0f;
-    auto circleX = button.getToggleState() ?
-                   trackBounds.getRight() - circleSize - 2.0f :
-                   trackBounds.getX() + 2.0f;
+    // Border (#2d1b4e)
+    g.setColour (juce::Colour (0xff2d1b4e));
+    g.drawRoundedRectangle (switchBounds, 2.0f, 2.0f);
 
-    g.setColour (SodaColors::background);
-    g.fillEllipse (circleX, trackBounds.getY() + 2.0f, circleSize, circleSize);
+    // Inner area (#1a0a2e)
+    auto innerBounds = switchBounds.reduced (4.0f);
+    g.setColour (juce::Colour (0xff1a0a2e));
+    g.fillRoundedRectangle (innerBounds, 1.0f);
 
-    // Draw label text on the left
-    g.setColour (SodaColors::textPrimary);
-    g.setFont (14.0f);
-    auto textBounds = bounds.withWidth (50.0f);
-    g.drawText (button.getButtonText(), textBounds, juce::Justification::centredLeft);
+    // LED indicator at top (red when ON)
+    auto ledBounds = innerBounds.removeFromTop (8.0f).reduced (2.0f, 0.0f);
+    if (isOn)
+    {
+        // Glowing red LED
+        g.setColour (SodaColors::sodaRed);
+        g.fillRoundedRectangle (ledBounds, 1.0f);
+
+        // Glow effect
+        g.setColour (SodaColors::sodaRed.withAlpha (0.4f));
+        auto glowBounds = ledBounds.expanded (2.0f);
+        g.fillRoundedRectangle (glowBounds, 2.0f);
+    }
+    else
+    {
+        // Dim LED
+        g.setColour (SodaColors::sodaRed.withAlpha (0.2f));
+        g.fillRoundedRectangle (ledBounds, 1.0f);
+    }
+
+    innerBounds.removeFromTop (4.0f);  // Gap after LED
+
+    // Rocker/slider element (moves up when ON, down when OFF)
+    auto rockerHeight = innerBounds.getHeight() * 0.6f;
+    auto rockerBounds = innerBounds.withHeight (rockerHeight);
+
+    if (!isOn)
+        rockerBounds.translate (0.0f, innerBounds.getHeight() - rockerHeight);
+
+    // Gradient for rocker (looks 3D)
+    juce::ColourGradient gradient (
+        juce::Colour (0xff333333), rockerBounds.getX(), rockerBounds.getY(),
+        juce::Colour (0xff111111), rockerBounds.getX(), rockerBounds.getBottom(),
+        false
+    );
+    g.setGradientFill (gradient);
+    g.fillRect (rockerBounds);
+
+    // Rocker border
+    g.setColour (juce::Colour (0xff444444));
+    g.drawRect (rockerBounds, 1.0f);
+
+    // Highlight lines on rocker
+    g.setColour (juce::Colours::white.withAlpha (0.1f));
+    g.fillRect (rockerBounds.getX(), rockerBounds.getY() + 2.0f, rockerBounds.getWidth(), 1.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.05f));
+    g.fillRect (rockerBounds.getX(), rockerBounds.getY() + 4.0f, rockerBounds.getWidth(), 1.0f);
 }
 
 void SodaLookAndFeel::drawLabel (juce::Graphics& g, juce::Label& label)

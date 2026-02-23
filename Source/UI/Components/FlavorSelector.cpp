@@ -5,14 +5,21 @@
 FlavorSelector::FlavorSelector (juce::AudioProcessorValueTreeState& apvts)
     : apvts (apvts)
 {
-    // Setup title label
+    // Setup title label (small, uppercase)
     titleLabel.setText ("FLAVOR", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (12.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (10.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centredLeft);
-    titleLabel.setColour (juce::Label::textColourId, SodaColors::textSecondary);
+    titleLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed.withAlpha (0.6f));
     addAndMakeVisible (titleLabel);
 
-    // Setup combo box
+    // Setup large flavor name label
+    flavorLabel.setText ("CHERRY", juce::dontSendNotification);
+    flavorLabel.setFont (juce::Font (20.0f, juce::Font::bold));
+    flavorLabel.setJustificationType (juce::Justification::centredLeft);
+    flavorLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
+    addAndMakeVisible (flavorLabel);
+
+    // Setup combo box (hidden, but functional for parameter control)
     flavorCombo.addItem ("CHERRY", 1);
     flavorCombo.addItem ("GRAPE", 2);
     flavorCombo.addItem ("DIRTY SODA", 3);
@@ -23,6 +30,23 @@ FlavorSelector::FlavorSelector (juce::AudioProcessorValueTreeState& apvts)
     flavorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
         apvts, type.getParamID(), flavorCombo
     );
+
+    // Update label when combo changes
+    flavorCombo.onChange = [this]() { updateFlavorLabel(); };
+
+    updateFlavorLabel();
+}
+
+void FlavorSelector::updateFlavorLabel()
+{
+    int selectedId = flavorCombo.getSelectedId();
+    switch (selectedId)
+    {
+        case 1: flavorLabel.setText ("CHERRY", juce::dontSendNotification); break;
+        case 2: flavorLabel.setText ("GRAPE", juce::dontSendNotification); break;
+        case 3: flavorLabel.setText ("DIRTY SODA", juce::dontSendNotification); break;
+        default: flavorLabel.setText ("CHERRY", juce::dontSendNotification); break;
+    }
 }
 
 void FlavorSelector::paint (juce::Graphics& g)
@@ -33,6 +57,15 @@ void FlavorSelector::paint (juce::Graphics& g)
 void FlavorSelector::resized()
 {
     auto bounds = getLocalBounds();
-    titleLabel.setBounds (bounds.removeFromTop (20));
-    flavorCombo.setBounds (bounds.reduced (0, 2));
+
+    // Small label at top
+    titleLabel.setBounds (bounds.removeFromTop (16));
+
+    bounds.removeFromTop (2);  // Gap
+
+    // Large flavor name display
+    flavorLabel.setBounds (bounds.removeFromTop (28));
+
+    // ComboBox takes same space (will be styled to look like the label)
+    flavorCombo.setBounds (flavorLabel.getBounds());
 }

@@ -18,9 +18,12 @@ public:
 private:
     juce::AudioProcessorValueTreeState& apvts;
 
+    juce::Label statusLabel;  // Shows "CARBONATED" or "FLAT"
     juce::ToggleButton carbonatedButton;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> carbonatedAttachment;
+
+    void updateLabel();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CarbonatedToggle)
 };

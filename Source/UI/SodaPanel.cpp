@@ -14,27 +14,37 @@ SodaPanel::SodaPanel (juce::AudioProcessorValueTreeState& apvts)
 
 void SodaPanel::paint (juce::Graphics& g)
 {
-    juce::ignoreUnused (g);
+    auto bounds = getLocalBounds();
+
+    // Footer section with semi-transparent white/pink background
+    auto footerBounds = bounds.removeFromBottom (90);
+    g.setColour (juce::Colours::white.withAlpha (0.5f));
+    g.fillRect (footerBounds);
+
+    // Top border for footer
+    g.setColour (juce::Colour (0xffff3b30).withAlpha (0.2f));
+    g.drawHorizontalLine (footerBounds.getY(), static_cast<float>(footerBounds.getX()),
+                          static_cast<float>(footerBounds.getRight()));
 }
 
 void SodaPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced (20);
+    auto bounds = getLocalBounds();
 
-    // FIZZ knob in center (takes most space)
-    auto fizzBounds = bounds.removeFromTop (static_cast<int>(bounds.getHeight() * 0.7f));
-    fizzKnob.setBounds (fizzBounds);
+    // Footer section (bottom 90px)
+    auto footerBounds = bounds.removeFromBottom (90);
+    auto footerContent = footerBounds.reduced (20, 15);
 
-    bounds.removeFromTop (20);  // Spacing
+    // Flavor on left
+    auto flavorBounds = footerContent.removeFromLeft (footerContent.getWidth() / 2);
+    flavorSelector.setBounds (flavorBounds.reduced (5, 0));
 
-    // Footer section with flavor and carbonated toggle
-    auto footerHeight = 60;
-    auto footerBounds = bounds.removeFromBottom (footerHeight);
-
-    // Split footer in half
-    auto flavorBounds = footerBounds.removeFromLeft (footerBounds.getWidth() / 2).reduced (10, 0);
-    flavorSelector.setBounds (flavorBounds);
-
-    auto toggleBounds = footerBounds.reduced (10, 0);
+    // Carbonated toggle on right (vertical rocker - 48x80)
+    auto toggleBounds = footerContent.withSizeKeepingCentre (48, 70);
     carbonatedToggle.setBounds (toggleBounds);
+
+    // FIZZ knob in center of remaining space
+    bounds.removeFromBottom (10);  // Small gap above footer
+    auto fizzBounds = bounds;
+    fizzKnob.setBounds (fizzBounds);
 }

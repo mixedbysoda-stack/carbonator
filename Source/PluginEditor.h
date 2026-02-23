@@ -10,7 +10,8 @@
  * Soda Filter Editor
  * Retro soda can aesthetic with vertical layout
  */
-class SodaFilterAudioProcessorEditor : public juce::AudioProcessorEditor
+class SodaFilterAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                        private juce::Timer
 {
 public:
     SodaFilterAudioProcessorEditor (SodaFilterAudioProcessor&);
@@ -19,6 +20,7 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
     // Reference to processor
@@ -33,6 +35,22 @@ private:
     // Title labels
     juce::Label titleLabel;
     juce::Label subtitleLabel;
+
+    // Bubble animation
+    struct Bubble
+    {
+        float x;           // Position (0-1 normalized)
+        float y;           // Position (0-1 normalized)
+        float size;        // Diameter in pixels
+        float speed;       // Rise speed
+        float delay;       // Animation delay
+        float lifetime;    // Time alive
+    };
+
+    std::vector<Bubble> bubbles;
+    void generateBubbles();
+    void updateBubbles();
+    juce::Colour getBubbleColor();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SodaFilterAudioProcessorEditor)
 };
