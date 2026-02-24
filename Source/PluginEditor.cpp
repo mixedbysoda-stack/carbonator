@@ -21,11 +21,11 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
     subtitleLabel.setText ("VINTAGE CARBONATED AUDIO", juce::dontSendNotification);
     subtitleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     subtitleLabel.setJustificationType (juce::Justification::centred);
-    subtitleLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
+    subtitleLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getFlavorAccent());
     addAndMakeVisible (subtitleLabel);
 
-    // Setup theme toggle button (LARGER icon)
-    themeToggleButton.setButtonText ("☀");  // Sun emoji for light mode
+    // Setup theme toggle button (starts with moon since we default to dark)
+    themeToggleButton.setButtonText ("☾");  // Moon emoji for dark mode
     themeToggleButton.onClick = [this]() { toggleTheme(); };
     addAndMakeVisible (themeToggleButton);
 
@@ -93,28 +93,6 @@ void SodaFilterAudioProcessorEditor::updateBubbles()
     }
 }
 
-juce::Colour SodaFilterAudioProcessorEditor::getBubbleColor()
-{
-    // Get current flavor
-    auto* flavorParam = audioProcessor.getAPVTS().getRawParameterValue ("flavorType");
-    int flavorIndex = flavorParam != nullptr ? static_cast<int>(flavorParam->load()) : 0;
-
-    switch (flavorIndex)
-    {
-        case 0:  // Cherry - Super bright red
-            return juce::Colour (0xffff0040);  // Hot pink-red, super vibrant
-
-        case 1:  // Grape - Purple
-            return juce::Colour (0xff9b59b6);
-
-        case 2:  // Dirty Soda - Dark purple (lean color)
-            return juce::Colour (0xff6a0dad);
-
-        default:
-            return juce::Colour (0xffff0040);
-    }
-}
-
 SodaFilterAudioProcessorEditor::~SodaFilterAudioProcessorEditor()
 {
     stopTimer();
@@ -123,6 +101,11 @@ SodaFilterAudioProcessorEditor::~SodaFilterAudioProcessorEditor()
 
 void SodaFilterAudioProcessorEditor::timerCallback()
 {
+    // Poll flavor param and update global flavor color
+    auto* flavorParam = audioProcessor.getAPVTS().getRawParameterValue ("flavorType");
+    if (flavorParam != nullptr)
+        SodaColors::Theme::currentFlavor = static_cast<FlavorType> (static_cast<int> (flavorParam->load()));
+
     // Update bubble positions
     auto* carbonatedParam = audioProcessor.getAPVTS().getRawParameterValue ("carbonated");
     bool isCarbonated = carbonatedParam != nullptr ? carbonatedParam->load() > 0.5f : true;
@@ -170,7 +153,7 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
 
     if (isCarbonated)
     {
-        juce::Colour bubbleColor = getBubbleColor();
+        juce::Colour bubbleColor = SodaColors::Theme::getFlavorAccent();
 
         for (const auto& bubble : bubbles)
         {

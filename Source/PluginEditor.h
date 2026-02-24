@@ -54,7 +54,6 @@ private:
     std::vector<Bubble> bubbles;
     void generateBubbles();
     void updateBubbles();
-    juce::Colour getBubbleColor();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SodaFilterAudioProcessorEditor)
 };

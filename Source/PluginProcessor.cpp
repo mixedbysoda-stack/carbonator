@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Parameters/ParameterFactory.h"
+#include <cmath>
 
 //==============================================================================
 SodaFilterAudioProcessor::SodaFilterAudioProcessor()
@@ -59,8 +60,8 @@ bool SodaFilterAudioProcessor::isMidiEffect() const
 
 double SodaFilterAudioProcessor::getTailLengthSeconds() const
 {
-    // Return reverb tail time for Grape flavor (approximate)
-    return 2.0;
+    // Tail for modulated delays and chorus effects
+    return 0.5;
 }
 
 int SodaFilterAudioProcessor::getNumPrograms()
@@ -99,6 +100,9 @@ void SodaFilterAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
 
     effectsChain->prepare (spec);
+
+    // Report oversampling latency to host
+    setLatencySamples (static_cast<int> (std::ceil (effectsChain->getLatencyInSamples())));
 }
 
 void SodaFilterAudioProcessor::releaseResources()
@@ -146,6 +150,11 @@ void SodaFilterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     juce::dsp::AudioBlock<float> block (buffer);
     juce::dsp::ProcessContextReplacing<float> context (block);
     effectsChain->process (context);
+
+    // Update latency if quality mode changed
+    int newLatency = static_cast<int> (std::ceil (effectsChain->getLatencyInSamples()));
+    if (newLatency != getLatencySamples())
+        setLatencySamples (newLatency);
 }
 
 //==============================================================================

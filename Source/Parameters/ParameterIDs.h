@@ -3,8 +3,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 /**
- * Soda Filter Parameter IDs
- * Simple 6-parameter plugin for underwater/soda can effect
+ * Carbonator v2.0 Parameter IDs
+ * 5 parameters: fizz, carbonated, flavor type, output gain, bypass
  */
 namespace ParameterIDs
 {
@@ -18,8 +18,7 @@ namespace ParameterIDs
     // Flavor Parameters
     namespace Flavor
     {
-        inline const juce::ParameterID type          { "flavorType",     1 };  // 0=Cherry, 1=Grape, 2=Dirty Soda
-        inline const juce::ParameterID intensity     { "flavorIntensity", 1 };  // 0-100%: Effect strength
+        inline const juce::ParameterID type          { "flavorType",     1 };  // 0=Cola, 1=Cherry, 2=Grape, 3=LemonLime, 4=OrangeCream
     }
 
     // Global Parameters
@@ -27,15 +26,18 @@ namespace ParameterIDs
     {
         inline const juce::ParameterID outputGain    { "outputGain",    1 };  // -12 to +12 dB
         inline const juce::ParameterID bypass        { "bypass",        1 };  // Bool: Global bypass
+        inline const juce::ParameterID qualityMode   { "qualityMode",   1 };  // Bool: HQ mode (4x oversampling)
     }
 }
 
 /**
- * Enum for soda flavors
+ * Enum for soda flavors (v2.0)
  */
 enum class FlavorType
 {
-    Cherry = 0,      // Low-pass + Distortion
-    Grape,           // Low-pass + Reverb
-    DirtySoda        // Low-pass + Pitch Shift (-12 semitones)
+    Cola = 0,        // Analog Console Warmth
+    Cherry,          // Sweet Vocal Presence
+    Grape,           // Lo-Fi Tape Texture
+    LemonLime,       // Crisp Exciter
+    OrangeCream      // Stereo Width + Warmth
 };

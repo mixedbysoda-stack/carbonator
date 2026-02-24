@@ -8,6 +8,11 @@ FizzKnob::FizzKnob (juce::AudioProcessorValueTreeState& apvts)
     // Setup FIZZ slider
     fizzSlider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     fizzSlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    fizzSlider.setRotaryParameters (
+        juce::MathConstants<float>::pi,         // startAngle: π (6 o'clock, 0%)
+        3.0f * juce::MathConstants<float>::pi,  // endAngle: 3π (6 o'clock, 100%, full 360°)
+        true  // stopAtEnd
+    );
     addAndMakeVisible (fizzSlider);
 
     // Attach to parameter
@@ -23,10 +28,7 @@ FizzKnob::FizzKnob (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (percentageLabel);
 
     // Setup title label (LARGER for readability)
-    titleLabel.setText ("FIZZ", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (24.0f, juce::Font::bold));
-    titleLabel.setJustificationType (juce::Justification::centred);
-    titleLabel.setColour (juce::Label::textColourId, SodaColors::textSecondary);
+    titleLabel.setText ("", juce::dontSendNotification);
     addAndMakeVisible (titleLabel);
 
     // Track interaction state
@@ -53,10 +55,12 @@ FizzKnob::FizzKnob (juce::AudioProcessorValueTreeState& apvts)
             pulsePhase = 0.0f;  // Reset pulse
         }
         lastValue = currentValue;
+        updateMoodWord();
     };
 
-    // Initialize percentage
+    // Initialize percentage and mood word
     fizzSlider.onValueChange();
+    updateMoodWord();
 
     // Start animation timer (60 fps)
     startTimerHz (60);
@@ -64,6 +68,8 @@ FizzKnob::FizzKnob (juce::AudioProcessorValueTreeState& apvts)
 
 void FizzKnob::paint (juce::Graphics& g)
 {
+    paintMoodText (g);
+
     auto knobBounds = fizzSlider.getBounds().toFloat();
     auto center = knobBounds.getCentre();
     auto radius = knobBounds.getWidth() / 2.0f;
@@ -126,6 +132,18 @@ void FizzKnob::timerCallback()
     if (pulsePhase > 1.0f)
         pulsePhase -= 1.0f;
 
+    // Poll current flavor and update mood word if changed
+    auto* flavorParam = apvts.getRawParameterValue ("flavorType");
+    if (flavorParam != nullptr)
+    {
+        auto newFlavor = static_cast<FlavorType>(static_cast<int>(flavorParam->load()));
+        if (newFlavor != currentFlavor)
+        {
+            currentFlavor = newFlavor;
+            updateMoodWord();
+        }
+    }
+
     repaint();
 }
 
@@ -134,7 +152,8 @@ void FizzKnob::resized()
     auto bounds = getLocalBounds();
 
     // Title at top (more space for larger text)
-    titleLabel.setBounds (bounds.removeFromTop (40));
+    titleArea = bounds.removeFromTop (40);
+    titleLabel.setBounds (titleArea);
 
     // Large knob in center
     auto knobSize = juce::jmin (bounds.getWidth(), bounds.getHeight() - 60);
@@ -143,4 +162,215 @@ void FizzKnob::resized()
 
     // Percentage below knob (more space for larger text)
     percentageLabel.setBounds (bounds.removeFromTop (50));
+}
+
+void FizzKnob::updateMoodWord()
+{
+    moodWord = "FIZZ";
+}
+
+void FizzKnob::paintMoodText (juce::Graphics& g)
+{
+    if (titleArea.isEmpty())
+        return;
+
+    auto font = juce::Font (26.0f, juce::Font::bold);
+    g.setFont (font);
+
+    float fizz = static_cast<float>(fizzSlider.getValue()) / 100.0f;
+    auto accent = SodaColors::Theme::getFlavorAccent();
+    juce::String text = "FIZZ";
+
+    switch (currentFlavor)
+    {
+        case FlavorType::Cola:
+        {
+            // Warm breathing glow + character wave (heat shimmer)
+            float breathe = std::sin (pulsePhase * juce::MathConstants<float>::twoPi) * 0.5f + 0.5f;
+            float glowSize = (2.0f + breathe * 6.0f) * fizz;
+
+            // Pulsing warm glow behind text
+            if (fizz > 0.05f)
+            {
+                for (float r = glowSize; r >= 1.0f; r -= 1.5f)
+                {
+                    float alpha = (1.0f - r / (glowSize + 1.0f)) * 0.15f * fizz;
+                    g.setColour (accent.withAlpha (alpha));
+                    g.drawText (text, titleArea.toFloat().expanded (r, r * 0.5f), juce::Justification::centred, false);
+                }
+            }
+
+            // Each character bobs up/down in a wave
+            float totalW = font.getStringWidthFloat (text);
+            float startX = titleArea.getCentreX() - totalW / 2.0f;
+            float baseY = static_cast<float>(titleArea.getY());
+            float h = static_cast<float>(titleArea.getHeight());
+
+            for (int i = 0; i < text.length(); ++i)
+            {
+                float charPhase = pulsePhase + i * 0.15f;
+                float yOff = std::sin (charPhase * juce::MathConstants<float>::twoPi * 1.5f) * fizz * 3.0f;
+                auto ch = text.substring (i, i + 1);
+                float cw = font.getStringWidthFloat (ch);
+
+                g.setColour (accent.interpolatedWith (juce::Colours::white, breathe * fizz * 0.3f));
+                g.drawText (ch, juce::Rectangle<float>(startX, baseY + yOff, cw + 1.0f, h),
+                            juce::Justification::centred, false);
+                startX += cw;
+            }
+            break;
+        }
+
+        case FlavorType::Cherry:
+        {
+            // Glossy bloom + sweeping sheen highlight
+            float sheenPos = std::fmod (pulsePhase * 2.0f, 1.0f);
+            float bloomPulse = std::sin (pulsePhase * juce::MathConstants<float>::twoPi * 1.5f) * 0.5f + 0.5f;
+
+            // Bloom glow behind text
+            float bloomSize = (1.0f + bloomPulse * 4.0f) * fizz;
+            g.setColour (accent.withAlpha (0.12f * fizz));
+            g.drawText (text, titleArea.toFloat().expanded (bloomSize, bloomSize * 0.5f), juce::Justification::centred, false);
+
+            // Each character lit by a sweeping sheen
+            float totalW = font.getStringWidthFloat (text);
+            float startX = titleArea.getCentreX() - totalW / 2.0f;
+            float baseY = static_cast<float>(titleArea.getY());
+            float h = static_cast<float>(titleArea.getHeight());
+
+            for (int i = 0; i < text.length(); ++i)
+            {
+                auto ch = text.substring (i, i + 1);
+                float cw = font.getStringWidthFloat (ch);
+                float charCenter = (startX + cw / 2.0f - titleArea.getX()) / static_cast<float>(titleArea.getWidth());
+
+                float distToSheen = std::abs (charCenter - sheenPos);
+                float sheenBright = juce::jmax (0.0f, 1.0f - distToSheen * 4.0f) * fizz;
+
+                auto charColor = accent.brighter (0.2f).interpolatedWith (juce::Colours::white, sheenBright * 0.6f);
+                g.setColour (charColor);
+                g.drawText (ch, juce::Rectangle<float>(startX, baseY, cw + 1.0f, h),
+                            juce::Justification::centred, false);
+                startX += cw;
+            }
+            break;
+        }
+
+        case FlavorType::Grape:
+        {
+            // VHS tape distortion: chromatic aberration + jitter + glitch + scanlines
+            float jitterX = std::sin (pulsePhase * juce::MathConstants<float>::twoPi * 7.3f) * fizz * 3.0f;
+            float jitterY = std::cos (pulsePhase * juce::MathConstants<float>::twoPi * 11.1f) * fizz * 1.5f;
+
+            float aberration = fizz * 3.0f;
+
+            // Red channel offset left
+            g.setColour (juce::Colour (0xffff4444).withAlpha (0.4f * fizz));
+            g.drawText (text, titleArea.toFloat().translated (jitterX - aberration, jitterY), juce::Justification::centred, false);
+
+            // Blue channel offset right
+            g.setColour (juce::Colour (0xff4444ff).withAlpha (0.4f * fizz));
+            g.drawText (text, titleArea.toFloat().translated (jitterX + aberration, jitterY), juce::Justification::centred, false);
+
+            // Glitch: occasional horizontal shift
+            float glitchChance = std::sin (pulsePhase * juce::MathConstants<float>::twoPi * 13.7f);
+            float glitchOffset = (glitchChance > 0.85f) ? fizz * 8.0f : 0.0f;
+
+            // Main text
+            g.setColour (accent.withAlpha (0.9f));
+            g.drawText (text, titleArea.toFloat().translated (jitterX + glitchOffset, jitterY), juce::Justification::centred, false);
+
+            // Scanline overlay
+            if (fizz > 0.15f)
+            {
+                g.setColour (juce::Colours::black.withAlpha (0.08f * fizz));
+                for (int y = titleArea.getY(); y < titleArea.getBottom(); y += 3)
+                    g.fillRect (titleArea.getX(), y, titleArea.getWidth(), 1);
+            }
+            break;
+        }
+
+        case FlavorType::LemonLime:
+        {
+            // Electric neon glow + character flash + spark particles
+            float pulse = std::sin (pulsePhase * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f + 0.5f;
+
+            // Neon glow halo
+            float glowSize = (1.0f + pulse * 3.0f) * fizz;
+            for (float r = glowSize; r >= 1.0f; r -= 1.0f)
+            {
+                float alpha = (1.0f - r / (glowSize + 1.0f)) * 0.2f * fizz;
+                g.setColour (accent.withAlpha (alpha));
+                g.drawText (text, titleArea.toFloat().expanded (r, r * 0.5f), juce::Justification::centred, false);
+            }
+
+            // Characters with individual flash cycles
+            float totalW = font.getStringWidthFloat (text);
+            float startX = titleArea.getCentreX() - totalW / 2.0f;
+            float baseY = static_cast<float>(titleArea.getY());
+            float h = static_cast<float>(titleArea.getHeight());
+
+            for (int i = 0; i < text.length(); ++i)
+            {
+                auto ch = text.substring (i, i + 1);
+                float cw = font.getStringWidthFloat (ch);
+
+                float charFlash = std::sin ((pulsePhase + i * 0.25f) * juce::MathConstants<float>::twoPi * 4.0f);
+                bool isFlashing = charFlash > 0.7f && fizz > 0.3f;
+
+                g.setColour (isFlashing ? juce::Colours::white : accent);
+                g.drawText (ch, juce::Rectangle<float>(startX, baseY, cw + 1.0f, h),
+                            juce::Justification::centred, false);
+                startX += cw;
+            }
+
+            // Spark particles
+            if (fizz > 0.1f)
+            {
+                juce::Random sparkRng (static_cast<juce::int64>(pulsePhase * 12));
+                int sparkCount = static_cast<int>(fizz * 8);
+                for (int i = 0; i < sparkCount; ++i)
+                {
+                    float sx = titleArea.getX() + sparkRng.nextFloat() * titleArea.getWidth();
+                    float sy = titleArea.getY() + sparkRng.nextFloat() * titleArea.getHeight();
+                    float sparkSize = 1.0f + sparkRng.nextFloat() * 2.5f;
+                    g.setColour (accent.brighter (0.5f).withAlpha (sparkRng.nextFloat() * fizz * 0.8f));
+                    g.fillEllipse (sx, sy, sparkSize, sparkSize);
+                }
+            }
+            break;
+        }
+
+        case FlavorType::OrangeCream:
+        {
+            // Stereo spread: dual ghost text breathes apart + warm center
+            float breathe = std::sin (pulsePhase * juce::MathConstants<float>::twoPi * 0.8f) * 0.5f + 0.5f;
+            float spread = (2.0f + breathe * 4.0f) * fizz;
+
+            // Left ghost (stereo L)
+            g.setColour (accent.withAlpha (0.25f * fizz));
+            g.drawText (text, titleArea.toFloat().translated (-spread, 0), juce::Justification::centred, false);
+
+            // Right ghost (stereo R)
+            g.setColour (accent.withAlpha (0.25f * fizz));
+            g.drawText (text, titleArea.toFloat().translated (spread, 0), juce::Justification::centred, false);
+
+            // Warm center glow
+            float glowAlpha = 0.08f + breathe * 0.1f * fizz;
+            g.setColour (accent.withAlpha (glowAlpha));
+            g.drawText (text, titleArea.toFloat().expanded (2.0f, 1.0f), juce::Justification::centred, false);
+
+            // Main text
+            g.setColour (accent.interpolatedWith (juce::Colours::white, breathe * fizz * 0.2f));
+            g.drawText (text, titleArea, juce::Justification::centred, false);
+            break;
+        }
+
+        default:
+        {
+            g.setColour (SodaColors::Theme::getTextSecondary());
+            g.drawText (text, titleArea, juce::Justification::centred, false);
+            break;
+        }
+    }
 }

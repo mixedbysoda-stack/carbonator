@@ -2,35 +2,29 @@
 
 #include <juce_dsp/juce_dsp.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "LowPassFilter.h"
 #include "FlavorProcessor.h"
 
 /**
- * Main effects chain for Soda Filter
- * Signal flow: Input -> Low-Pass Filter -> Flavor Effect -> Output Gain -> Safety Limiter
+ * Main effects chain for Carbonator v2.0
+ * Signal flow: Input -> FlavorProcessor (Fizz morphing + Carbonated toggle)
+ *              -> Auto-Gain Compensation -> Output Gain -> Safety Limiter
  */
 class EffectsChain
 {
 public:
     explicit EffectsChain (juce::AudioProcessorValueTreeState& apvts);
 
-    /**
-     * Prepare all effects for processing
-     */
     void prepare (const juce::dsp::ProcessSpec& spec);
-
-    /**
-     * Process audio through all effects in series
-     */
     void process (juce::dsp::ProcessContextReplacing<float>& context);
-
-    /**
-     * Reset all effects
-     */
     void reset();
 
+    /** Get total processing latency (oversampling) */
+    float getLatencyInSamples() const;
+
+    /** Set quality mode (oversampling on/off) */
+    void setQualityMode (bool hq);
+
 private:
-    // Reference to APVTS
     juce::AudioProcessorValueTreeState& apvts;
 
     // Output gain control
@@ -39,12 +33,20 @@ private:
     // Safety limiter (prevents clipping)
     juce::dsp::Limiter<float> outputLimiter;
 
-    // Individual effect processors (in signal flow order)
-    LowPassFilter lowPassFilter;
+    // Flavor effect processor (handles all DSP + Fizz morphing + Carbonated toggle)
     FlavorProcessor flavorProcessor;
 
-    // Bypass parameter
+    // Auto-gain compensation (smoothed)
+    juce::SmoothedValue<float> autoGainCompensation;
+    float inputRMS = 0.0f;
+    float outputRMS = 0.0f;
+    static constexpr float rmsAlpha = 0.01f;  // Exponential smoothing coefficient
+
+    // Parameter pointers
     juce::AudioParameterBool* bypassParam;
+    juce::AudioParameterFloat* fizzAmountParam;
+    juce::AudioParameterBool* carbonatedParam;
+    juce::AudioParameterBool* qualityModeParam;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EffectsChain)
 };

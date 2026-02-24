@@ -5,22 +5,24 @@
 FlavorSelector::FlavorSelector (juce::AudioProcessorValueTreeState& apvts)
     : apvts (apvts)
 {
-    // Setup title label (LARGER, uppercase)
+    // Setup title label
     titleLabel.setText ("FLAVOR", juce::dontSendNotification);
     titleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     titleLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (titleLabel);
 
-    // Setup large flavor name label (BIGGER for readability)
-    flavorLabel.setText ("CHERRY", juce::dontSendNotification);
+    // Setup large flavor name label
+    flavorLabel.setText ("COLA", juce::dontSendNotification);
     flavorLabel.setFont (juce::Font (28.0f, juce::Font::bold));
     flavorLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (flavorLabel);
 
     // Setup combo box (hidden, but functional for parameter control)
-    flavorCombo.addItem ("CHERRY", 1);
-    flavorCombo.addItem ("GRAPE", 2);
-    flavorCombo.addItem ("DIRTY SODA", 3);
+    flavorCombo.addItem ("COLA", 1);
+    flavorCombo.addItem ("CHERRY", 2);
+    flavorCombo.addItem ("GRAPE", 3);
+    flavorCombo.addItem ("LEMON-LIME", 4);
+    flavorCombo.addItem ("ORANGE CREAM", 5);
     addAndMakeVisible (flavorCombo);
 
     // Attach to parameter
@@ -40,10 +42,12 @@ void FlavorSelector::updateFlavorLabel()
     int selectedId = flavorCombo.getSelectedId();
     switch (selectedId)
     {
-        case 1: flavorLabel.setText ("CHERRY", juce::dontSendNotification); break;
-        case 2: flavorLabel.setText ("GRAPE", juce::dontSendNotification); break;
-        case 3: flavorLabel.setText ("DIRTY SODA", juce::dontSendNotification); break;
-        default: flavorLabel.setText ("CHERRY", juce::dontSendNotification); break;
+        case 1: flavorLabel.setText ("COLA", juce::dontSendNotification); break;
+        case 2: flavorLabel.setText ("CHERRY", juce::dontSendNotification); break;
+        case 3: flavorLabel.setText ("GRAPE", juce::dontSendNotification); break;
+        case 4: flavorLabel.setText ("LEMON-LIME", juce::dontSendNotification); break;
+        case 5: flavorLabel.setText ("ORANGE CREAM", juce::dontSendNotification); break;
+        default: flavorLabel.setText ("COLA", juce::dontSendNotification); break;
     }
 }
 
@@ -62,14 +66,14 @@ void FlavorSelector::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Small label at top (more space)
+    // Small label at top
     titleLabel.setBounds (bounds.removeFromTop (20));
 
-    bounds.removeFromTop (4);  // Slightly bigger gap
+    bounds.removeFromTop (4);
 
-    // Large flavor name display (more space for bigger font)
+    // Large flavor name display
     flavorLabel.setBounds (bounds.removeFromTop (36));
 
-    // ComboBox takes same space (will be styled to look like the label)
+    // ComboBox takes same space
     flavorCombo.setBounds (flavorLabel.getBounds());
 }

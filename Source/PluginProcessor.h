@@ -8,8 +8,8 @@
 /**
  * Soda Filter Audio Processor
  *
- * Underwater/soda can effect with flavor variations
- * Signal flow: Input → Low-Pass Filter → Flavor Effect → Output
+ * Carbonator v2.0 — 5-flavor DSP with Fizz morphing
+ * Signal flow: Input → FlavorProcessor (Fizz morphed) → Output Gain → Limiter
  */
 class SodaFilterAudioProcessor : public juce::AudioProcessor
 {

@@ -9,7 +9,7 @@ CarbonatedToggle::CarbonatedToggle (juce::AudioProcessorValueTreeState& apvts)
     statusLabel.setText ("CARBONATED", juce::dontSendNotification);
     statusLabel.setFont (juce::Font (13.0f, juce::Font::bold));
     statusLabel.setJustificationType (juce::Justification::centred);
-    statusLabel.setColour (juce::Label::textColourId, SodaColors::sodaRed);
+    statusLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getTextHighlight());
     addAndMakeVisible (statusLabel);
 
     // Setup toggle button (no text, just visual)

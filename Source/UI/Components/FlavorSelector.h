@@ -5,7 +5,7 @@
 
 /**
  * Flavor selector component
- * Allows choosing between Cherry, Grape, Dirty Soda
+ * Allows choosing between Cola, Cherry, Grape, Lemon-Lime, Orange Cream
  */
 class FlavorSelector : public juce::Component
 {

@@ -16,7 +16,7 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
                                        float rotaryStartAngle, float rotaryEndAngle,
                                        juce::Slider& slider)
 {
-    juce::ignoreUnused (slider, rotaryStartAngle, rotaryEndAngle);
+    juce::ignoreUnused (slider);
 
     // Reduce bounds to fit the ridges (they extend outward by ~17% of radius)
     auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (25.0f);
@@ -25,7 +25,7 @@ void SodaLookAndFeel::drawRotarySlider (juce::Graphics& g,
     auto centerY = bounds.getCentreY();
 
     // Calculate full rotation (0-360 degrees for bottle cap)
-    auto rotation = sliderPos * juce::MathConstants<float>::twoPi;
+    auto rotation = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
     // Get theme-aware colors
     auto capColor = SodaColors::Theme::getBorder();

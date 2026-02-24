@@ -4,7 +4,7 @@
 
 /**
  * Factory class for creating Soda Filter APVTS parameter layout
- * Defines 6 parameters: fizz, carbonated, flavor type/intensity, gain, bypass
+ * Defines 5 parameters: fizz, carbonated, flavor type, output gain, bypass
  */
 class ParameterFactory
 {

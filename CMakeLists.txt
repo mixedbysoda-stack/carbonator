@@ -1,23 +1,26 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(SodaFilter VERSION 1.0.0)
+project(SodaFilter VERSION 2.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# AAX SDK Path
+set(AAX_SDK_PATH "/Users/soda/Documents/aax-sdk-2-9-0")
 
 # Add JUCE
 add_subdirectory(JUCE)
 
 # Plugin formats to build
-set(FORMATS VST3 AU Standalone)
+set(FORMATS VST3 AU AAX Standalone)
 
 # Source files
 set(SOURCE_FILES
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Parameters/ParameterFactory.cpp
+    Source/DSP/SaturationEngine.cpp
     Source/DSP/EffectsChain.cpp
-    Source/DSP/LowPassFilter.cpp
     Source/DSP/FlavorProcessor.cpp
     Source/UI/LookAndFeel/ColorScheme.cpp
     Source/UI/LookAndFeel/SodaLookAndFeel.cpp
@@ -48,6 +51,7 @@ juce_add_plugin(SodaFilter
     # Plugin settings
     VST3_CATEGORIES Fx Filter
     AU_MAIN_TYPE kAudioUnitType_Effect
+    AAX_CATEGORY AAX_ePlugInCategory_Effect
 )
 
 # Add source files
@@ -61,6 +65,7 @@ target_compile_definitions(SodaFilter
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_REPORT_APP_USAGE=0
+        JucePlugin_AAXLibs_path="${AAX_SDK_PATH}/Libs"
 )
 
 # Link libraries
