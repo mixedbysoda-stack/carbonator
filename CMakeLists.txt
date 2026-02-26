@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(COPY_AFTER_BUILD "Copy plugins to system folders after build" ON)
 
+# Static link C++ runtime on Windows (must be set before add_subdirectory)
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Minimum macOS version — 10.13 High Sierra for maximum compatibility
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 
@@ -115,9 +120,12 @@ if(APPLE)
     )
 endif()
 
-# Compiler warnings
+# Compiler warnings and platform flags
 if(MSVC)
     target_compile_options(SodaFilter PRIVATE /W4)
+    # Statically link the C++ runtime so users don't need VC++ Redistributable
+    set_property(TARGET SodaFilter PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set_property(TARGET SodaFilterBinaryData PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     target_compile_options(SodaFilter PRIVATE -Wall -Wextra -Wpedantic)
 endif()

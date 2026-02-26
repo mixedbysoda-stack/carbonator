@@ -29,8 +29,8 @@ jobs:
         run: |
           mkdir -p dist/Windows/VST3
           mkdir -p dist/Windows/Standalone
-          cp -r build/SodaFilter_artefacts/Release/VST3/* dist/Windows/VST3/ || true
-          cp -r build/SodaFilter_artefacts/Release/Standalone/* dist/Windows/Standalone/ || true
+          cp -r build/SodaFilter_artefacts/Release/VST3/Carbonator.vst3 dist/Windows/VST3/ || true
+          cp build/SodaFilter_artefacts/Release/Standalone/Carbonator.exe dist/Windows/Standalone/ || true
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
