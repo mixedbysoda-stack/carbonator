@@ -7,10 +7,12 @@
  * Carbonated toggle component
  * ON = fizzy, OFF = flat (extra low-pass)
  */
-class CarbonatedToggle : public juce::Component
+class CarbonatedToggle : public juce::Component,
+                         private juce::Timer
 {
 public:
     CarbonatedToggle (juce::AudioProcessorValueTreeState& apvts);
+    ~CarbonatedToggle() override;
 
     void paint (juce::Graphics& g) override;
     void resized() override;
@@ -24,6 +26,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> carbonatedAttachment;
 
     void updateLabel();
+    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CarbonatedToggle)
 };

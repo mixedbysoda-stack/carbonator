@@ -94,17 +94,12 @@ void FlavorProcessor::prepare (const juce::dsp::ProcessSpec& spec)
     lemonTeleBandpass.prepare (spec);
     lemonTeleHighCut.prepare (spec);
 
-    // ─── ORANGE CREAM ───────────────────────────────────────────
-    orangeMidCompressor.prepare (spec);
-    orangeDetuneDelayL.setSize (1, kMaxDelayBufferSize);
-    orangeDetuneDelayL.clear();
-    orangeDetuneDelayR.setSize (1, kMaxDelayBufferSize);
-    orangeDetuneDelayR.clear();
-    orangeDetuneWritePosL = 0;
-    orangeDetuneWritePosR = 0;
-    orangeDetunePitchPhaseL = 0.0f;
-    orangeDetunePitchPhaseR = 0.0f;
-    orangeWarmShelf.prepare (spec);
+    // ─── ORANGE CREAM (Lowpass Filter + Drive) ──────────────────
+    orangeLP1.prepare (spec);
+    orangeLP1.setType (juce::dsp::StateVariableTPTFilterType::lowpass);
+    orangeLP2.prepare (spec);
+    orangeLP2.setType (juce::dsp::StateVariableTPTFilterType::lowpass);
+    orangeLowShelf.prepare (spec);
 }
 
 void FlavorProcessor::process (juce::dsp::ProcessContextReplacing<float>& context)
@@ -173,14 +168,9 @@ void FlavorProcessor::reset()
     lemonTeleBandpass.reset();
     lemonTeleHighCut.reset();
 
-    orangeMidCompressor.reset();
-    orangeDetuneDelayL.clear();
-    orangeDetuneDelayR.clear();
-    orangeDetuneWritePosL = 0;
-    orangeDetuneWritePosR = 0;
-    orangeDetunePitchPhaseL = 0.0f;
-    orangeDetunePitchPhaseR = 0.0f;
-    orangeWarmShelf.reset();
+    orangeLP1.reset();
+    orangeLP2.reset();
+    orangeLowShelf.reset();
 }
 
 // =============================================================================
@@ -605,183 +595,97 @@ void FlavorProcessor::processLemonLimeFlat (juce::dsp::AudioBlock<float>& block)
 }
 
 // =============================================================================
-// ORANGE CREAM — Stereo Width + Warmth
+// ORANGE CREAM — Lowpass Filter + Drive (OneKnob Filter style)
 // =============================================================================
 void FlavorProcessor::processOrangeCream (juce::dsp::AudioBlock<float>& block)
 {
-    const auto nChannels = block.getNumChannels();
     const auto nSamples = block.getNumSamples();
     float fizz = smoothedFizz.getCurrentValue();
 
-    // Fizz-morphed parameters (shaped curves)
-    float warmDrive    = FizzCurves::exponential (fizz, 1.2f, 2.5f, 2.0f);
-    float sideGainDb   = FizzCurves::sCurve (fizz, 0.0f, 5.0f);
-    float detuneCents  = FizzCurves::sCurve (fizz, 3.0f, 10.0f);
-    float midCompRatio = FizzCurves::exponential (fizz, 1.5f, 4.0f, 2.0f);
-    float hiShelfDb    = FizzCurves::logarithmic (fizz, 0.0f, -3.0f, 1.8f);
+    // Fizz-morphed parameters
+    // Drive: gentle warmth that increases as you close the filter
+    float drive      = FizzCurves::exponential (fizz, 1.0f, 2.5f, 2.0f);
+    // LP cutoff sweeps from wide open down to 200Hz
+    float lpCutoff   = FizzCurves::logarithmic (fizz, 20000.0f, 200.0f, 2.5f);
+    // Resonance adds filter character as it closes
+    float resonance  = FizzCurves::sCurve (fizz, 0.707f, 2.5f);
+    // Low shelf boost keeps the bass full as highs are removed
+    float lowBoostDb = FizzCurves::logarithmic (fizz, 0.0f, 4.0f, 1.8f);
 
-    // 1. Oversampled gentle warm saturation
+    // Advance smoothed fizz for the block
+    for (size_t i = 0; i < nSamples; ++i)
+        smoothedFizz.getNextValue();
+
+    // 1. Warm drive saturation (pre-filter for analog character)
     SaturationEngine::Params satParams;
     satParams.curve = SaturationEngine::CurveType::WarmClip;
-    satParams.drive = warmDrive;
+    satParams.drive = drive;
     saturationEngine.process (block, satParams);
 
-    // For stereo processing, need at least 2 channels
-    if (nChannels >= 2)
-    {
-        auto* dataL = block.getChannelPointer (0);
-        auto* dataR = block.getChannelPointer (1);
-
-        // 2. Mid-Side encode
-        for (size_t i = 0; i < nSamples; ++i)
-        {
-            float mid  = (dataL[i] + dataR[i]) * 0.5f;
-            float side = (dataL[i] - dataR[i]) * 0.5f;
-            dataL[i] = mid;
-            dataR[i] = side;
-        }
-
-        // 3. MID compression (fix: actually process through compressor)
-        orangeMidCompressor.setRatio (midCompRatio);
-        orangeMidCompressor.setThreshold (-18.0f);
-        orangeMidCompressor.setAttack (15.0f);
-        orangeMidCompressor.setRelease (100.0f);
-        {
-            // Process mid channel (stored in L) through compressor
-            // Create a single-channel block wrapping just the L channel
-            float* midChannelPtr = dataL;
-            juce::dsp::AudioBlock<float> midBlock (&midChannelPtr, 1, nSamples);
-            juce::dsp::ProcessContextReplacing<float> ctx (midBlock);
-            orangeMidCompressor.process (ctx);
-        }
-
-        // 4. SIDE gain boost for width
-        float sideGain = juce::Decibels::decibelsToGain (sideGainDb);
-        for (size_t i = 0; i < nSamples; ++i)
-            dataR[i] *= sideGain;
-
-        // 5. Mid-Side decode back to L/R
-        for (size_t i = 0; i < nSamples; ++i)
-        {
-            float mid  = dataL[i];
-            float side = dataR[i];
-            dataL[i] = mid + side;
-            dataR[i] = mid - side;
-        }
-
-        // 6. Micro-Pitch Detune
-        float detuneRatio = std::pow (2.0f, detuneCents / 1200.0f);
-        float detuneRatioDown = std::pow (2.0f, -detuneCents / 1200.0f);
-
-        int delBufSize = orangeDetuneDelayL.getNumSamples();
-        auto* delL = orangeDetuneDelayL.getWritePointer (0);
-        auto* delR = orangeDetuneDelayR.getWritePointer (0);
-
-        for (size_t i = 0; i < nSamples; ++i)
-        {
-            delL[orangeDetuneWritePosL] = dataL[i];
-            delR[orangeDetuneWritePosR] = dataR[i];
-
-            // Left channel: pitch up (read faster)
-            orangeDetunePitchPhaseL += detuneRatio;
-            while (orangeDetunePitchPhaseL >= static_cast<float>(delBufSize))
-                orangeDetunePitchPhaseL -= static_cast<float>(delBufSize);
-
-            float readPosL = static_cast<float>(orangeDetuneWritePosL) - orangeDetunePitchPhaseL;
-            if (readPosL < 0.0f) readPosL += static_cast<float>(delBufSize);
-            int rIdxL = static_cast<int>(readPosL) % delBufSize;
-            int rNextL = (rIdxL + 1) % delBufSize;
-            float fracL = readPosL - std::floor (readPosL);
-            float detunedL = delL[rIdxL] * (1.0f - fracL) + delL[rNextL] * fracL;
-
-            // Right channel: pitch down (read slower)
-            orangeDetunePitchPhaseR += detuneRatioDown;
-            while (orangeDetunePitchPhaseR >= static_cast<float>(delBufSize))
-                orangeDetunePitchPhaseR -= static_cast<float>(delBufSize);
-
-            float readPosR = static_cast<float>(orangeDetuneWritePosR) - orangeDetunePitchPhaseR;
-            if (readPosR < 0.0f) readPosR += static_cast<float>(delBufSize);
-            int rIdxR = static_cast<int>(readPosR) % delBufSize;
-            int rNextR = (rIdxR + 1) % delBufSize;
-            float fracR = readPosR - std::floor (readPosR);
-            float detunedR = delR[rIdxR] * (1.0f - fracR) + delR[rNextR] * fracR;
-
-            dataL[i] = dataL[i] * 0.5f + detunedL * 0.5f;
-            dataR[i] = dataR[i] * 0.5f + detunedR * 0.5f;
-
-            orangeDetuneWritePosL = (orangeDetuneWritePosL + 1) % delBufSize;
-            orangeDetuneWritePosR = (orangeDetuneWritePosR + 1) % delBufSize;
-        }
-    }
-
-    // 7. Warm high shelf rolloff @ 10kHz
-    float shelfGain = juce::Decibels::decibelsToGain (hiShelfDb);
-    *orangeWarmShelf.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
-        sampleRate, 10000.0f, 0.707f, shelfGain);
+    // 2. Resonant lowpass filter (4th-order: two cascaded SVTPF stages)
+    //    Stage 1: resonant — provides the filter sweep character
+    //    Stage 2: fixed Q — adds steepness for a 24dB/oct rolloff
+    orangeLP1.setCutoffFrequency (lpCutoff);
+    orangeLP1.setResonance (resonance);
+    orangeLP2.setCutoffFrequency (lpCutoff);
+    orangeLP2.setResonance (0.707f);
     {
         juce::dsp::ProcessContextReplacing<float> ctx (block);
-        orangeWarmShelf.process (ctx);
+        orangeLP1.process (ctx);
+    }
+    {
+        juce::dsp::ProcessContextReplacing<float> ctx (block);
+        orangeLP2.process (ctx);
+    }
+
+    // 3. Low shelf boost @ 200Hz to keep the low end full
+    float lowBoostGain = juce::Decibels::decibelsToGain (lowBoostDb);
+    *orangeLowShelf.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf (
+        sampleRate, 200.0f, 0.707f, lowBoostGain);
+    {
+        juce::dsp::ProcessContextReplacing<float> ctx (block);
+        orangeLowShelf.process (ctx);
     }
 }
 
 void FlavorProcessor::processOrangeCreamFlat (juce::dsp::AudioBlock<float>& block)
 {
-    // FLAT: simplified — warm sat → M/S → side gain → M/S decode → warm shelf
-    const auto nChannels = block.getNumChannels();
+    // FLAT: dirtier version — heavier drive, more resonance, filter goes lower
     const auto nSamples = block.getNumSamples();
     float fizz = smoothedFizz.getCurrentValue();
 
-    // Fizz-morphed parameters (shaped curves)
-    float warmDrive    = FizzCurves::exponential (fizz, 1.2f, 2.5f, 2.0f);
-    float sideGainDb   = FizzCurves::sCurve (fizz, 0.0f, 5.0f);
-    float hiShelfDb    = FizzCurves::logarithmic (fizz, 0.0f, -3.0f, 1.8f);
+    // More aggressive parameters for the dirty version
+    float drive      = FizzCurves::exponential (fizz, 1.5f, 4.0f, 2.0f);
+    float lpCutoff   = FizzCurves::logarithmic (fizz, 20000.0f, 100.0f, 2.5f);
+    float resonance  = FizzCurves::sCurve (fizz, 0.707f, 4.0f);
+    float lowBoostDb = FizzCurves::logarithmic (fizz, 0.0f, 6.0f, 1.8f);
 
-    // 1. Oversampled warm saturation
+    // 1. Heavier tanh saturation (grittier than WarmClip)
     SaturationEngine::Params satParams;
-    satParams.curve = SaturationEngine::CurveType::WarmClip;
-    satParams.drive = warmDrive;
+    satParams.curve = SaturationEngine::CurveType::Tanh;
+    satParams.drive = drive;
     saturationEngine.process (block, satParams);
 
-    if (nChannels >= 2)
-    {
-        auto* dataL = block.getChannelPointer (0);
-        auto* dataR = block.getChannelPointer (1);
-
-        // Mid-Side encode
-        for (size_t i = 0; i < nSamples; ++i)
-        {
-            float mid  = (dataL[i] + dataR[i]) * 0.5f;
-            float side = (dataL[i] - dataR[i]) * 0.5f;
-            dataL[i] = mid;
-            dataR[i] = side;
-        }
-
-        // Harmonic enhancer on mids (inline — avoids double-pumping the oversampler
-        // and channel-count mismatch with the 2-channel oversampling object)
-        for (size_t i = 0; i < nSamples; ++i)
-            dataL[i] = std::tanh (dataL[i] * 2.0f) * 0.5f;
-
-        // SIDE: gain boost (no Haas delay — mono collapse risk removed)
-        float sideGain = juce::Decibels::decibelsToGain (sideGainDb);
-        for (size_t i = 0; i < nSamples; ++i)
-            dataR[i] *= sideGain;
-
-        // Mid-Side decode
-        for (size_t i = 0; i < nSamples; ++i)
-        {
-            float mid  = dataL[i];
-            float side = dataR[i];
-            dataL[i] = mid + side;
-            dataR[i] = mid - side;
-        }
-    }
-
-    // Warm high shelf rolloff
-    float shelfGain = juce::Decibels::decibelsToGain (hiShelfDb);
-    *orangeWarmShelf.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
-        sampleRate, 10000.0f, 0.707f, shelfGain);
+    // 2. Resonant lowpass filter (4th-order, both stages resonant for aggression)
+    orangeLP1.setCutoffFrequency (lpCutoff);
+    orangeLP1.setResonance (resonance);
+    orangeLP2.setCutoffFrequency (lpCutoff);
+    orangeLP2.setResonance (resonance * 0.5f);
     {
         juce::dsp::ProcessContextReplacing<float> ctx (block);
-        orangeWarmShelf.process (ctx);
+        orangeLP1.process (ctx);
+    }
+    {
+        juce::dsp::ProcessContextReplacing<float> ctx (block);
+        orangeLP2.process (ctx);
+    }
+
+    // 3. Low shelf boost to fatten up the bottom end
+    float lowBoostGain = juce::Decibels::decibelsToGain (lowBoostDb);
+    *orangeLowShelf.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf (
+        sampleRate, 200.0f, 0.707f, lowBoostGain);
+    {
+        juce::dsp::ProcessContextReplacing<float> ctx (block);
+        orangeLowShelf.process (ctx);
     }
 }

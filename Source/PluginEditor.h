@@ -36,6 +36,10 @@ private:
     juce::Label titleLabel;
     juce::Label subtitleLabel;
 
+    // Custom fonts
+    juce::Font titleFont;
+    juce::Font subtitleFont;
+
     // Theme toggle button
     juce::TextButton themeToggleButton;
     void toggleTheme();

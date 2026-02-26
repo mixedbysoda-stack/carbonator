@@ -106,14 +106,9 @@ private:
     juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
                                    juce::dsp::IIR::Coefficients<float>> lemonTeleHighCut;
 
-    // ─── ORANGE CREAM DSP members ───────────────────────────────
-    juce::dsp::Compressor<float> orangeMidCompressor;
-    juce::AudioBuffer<float> orangeDetuneDelayL;
-    juce::AudioBuffer<float> orangeDetuneDelayR;
-    int orangeDetuneWritePosL = 0;
-    int orangeDetuneWritePosR = 0;
-    float orangeDetunePitchPhaseL = 0.0f;
-    float orangeDetunePitchPhaseR = 0.0f;
+    // ─── ORANGE CREAM DSP members (Lowpass Filter + Drive) ──────
+    juce::dsp::StateVariableTPTFilter<float> orangeLP1;   // Resonant LPF stage 1
+    juce::dsp::StateVariableTPTFilter<float> orangeLP2;   // Steep LPF stage 2
     juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
-                                   juce::dsp::IIR::Coefficients<float>> orangeWarmShelf;
+                                   juce::dsp::IIR::Coefficients<float>> orangeLowShelf;
 };

@@ -26,6 +26,19 @@ CarbonatedToggle::CarbonatedToggle (juce::AudioProcessorValueTreeState& apvts)
     carbonatedButton.onClick = [this]() { updateLabel(); };
 
     updateLabel();
+
+    // Poll for flavor color changes at 15Hz
+    startTimerHz (15);
+}
+
+CarbonatedToggle::~CarbonatedToggle()
+{
+    stopTimer();
+}
+
+void CarbonatedToggle::timerCallback()
+{
+    updateLabel();
 }
 
 void CarbonatedToggle::updateLabel()

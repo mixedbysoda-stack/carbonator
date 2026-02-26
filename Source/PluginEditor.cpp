@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "UI/LookAndFeel/ColorScheme.h"
+#include "BinaryData.h"
 
 //==============================================================================
 SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioProcessor& p)
@@ -9,23 +10,33 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
     // Set look and feel
     setLookAndFeel (&sodaLAF);
 
-    // Setup title label (LARGER for impact)
-    titleLabel.setText ("carbonator", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (36.0f, juce::Font::bold));
+    // Load custom cursive font (Pacifico — Coke-style script)
+    auto typeface = juce::Typeface::createSystemTypefaceFor (BinaryData::PacificoRegular_ttf,
+                                                             BinaryData::PacificoRegular_ttfSize);
+    titleFont = juce::Font (juce::FontOptions (typeface).withHeight (42.0f));
+
+    // Setup title label with cursive font
+    titleLabel.setText ("Carbonator", juce::dontSendNotification);
+    titleLabel.setFont (titleFont);
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, SodaColors::sodaCream);
     titleLabel.setColour (juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     addAndMakeVisible (titleLabel);
 
-    // Setup subtitle label (LARGER for readability)
-    subtitleLabel.setText ("VINTAGE CARBONATED AUDIO", juce::dontSendNotification);
-    subtitleLabel.setFont (juce::Font (13.0f, juce::Font::bold));
+    // Load Lobster font for subtitle (Fizziest soda label style)
+    auto lobsterTypeface = juce::Typeface::createSystemTypefaceFor (BinaryData::LobsterRegular_ttf,
+                                                                     BinaryData::LobsterRegular_ttfSize);
+    subtitleFont = juce::Font (juce::FontOptions (lobsterTypeface).withHeight (16.0f));
+
+    // Setup subtitle label
+    subtitleLabel.setText ("Carbinated Audio", juce::dontSendNotification);
+    subtitleLabel.setFont (subtitleFont);
     subtitleLabel.setJustificationType (juce::Justification::centred);
     subtitleLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getFlavorAccent());
     addAndMakeVisible (subtitleLabel);
 
     // Setup theme toggle button (starts with moon since we default to dark)
-    themeToggleButton.setButtonText ("☾");  // Moon emoji for dark mode
+    themeToggleButton.setButtonText ("D");  // D = Dark mode
     themeToggleButton.onClick = [this]() { toggleTheme(); };
     addAndMakeVisible (themeToggleButton);
 
@@ -105,6 +116,10 @@ void SodaFilterAudioProcessorEditor::timerCallback()
     auto* flavorParam = audioProcessor.getAPVTS().getRawParameterValue ("flavorType");
     if (flavorParam != nullptr)
         SodaColors::Theme::currentFlavor = static_cast<FlavorType> (static_cast<int> (flavorParam->load()));
+
+    // Update title and subtitle color to match current flavor
+    titleLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getFlavorAccent());
+    subtitleLabel.setColour (juce::Label::textColourId, SodaColors::Theme::getFlavorAccent());
 
     // Update bubble positions
     auto* carbonatedParam = audioProcessor.getAPVTS().getRawParameterValue ("carbonated");
@@ -201,22 +216,7 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
     g.setGradientFill (gradient);
     g.fillRoundedRectangle (borderBounds, 32.0f);
 
-    // Draw title badge (red rounded pill with slight rotation)
-    auto titleBounds = juce::Rectangle<float> (150.0f, 40.0f, 220.0f, 50.0f);
-    titleBounds.setCentre (bounds.getCentreX(), 50.0f);
-
-    g.saveState();
-    g.addTransform (juce::AffineTransform::rotation (-0.035f, titleBounds.getCentreX(), titleBounds.getCentreY()));
-
-    // Badge shadow
-    g.setColour (juce::Colours::black.withAlpha (0.3f));
-    g.fillRoundedRectangle (titleBounds.translated (0.0f, 3.0f), 25.0f);
-
-    // Badge background (theme-aware)
-    g.setColour (SodaColors::Theme::getBorder());
-    g.fillRoundedRectangle (titleBounds, 25.0f);
-
-    g.restoreState();
+    // Title badge removed — cursive font stands on its own
 }
 
 void SodaFilterAudioProcessorEditor::toggleTheme()
@@ -228,7 +228,7 @@ void SodaFilterAudioProcessorEditor::toggleTheme()
 
     // Update button text
     themeToggleButton.setButtonText (
-        SodaColors::Theme::currentTheme == ThemeType::Light ? "☀" : "☾"
+        SodaColors::Theme::currentTheme == ThemeType::Light ? "L" : "D"
     );
 
     // Repaint everything

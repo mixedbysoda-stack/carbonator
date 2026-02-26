@@ -1,18 +1,27 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(SodaFilter VERSION 2.0.0)
+project(SodaFilter VERSION 2.2.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# AAX SDK Path
-set(AAX_SDK_PATH "/Users/soda/Documents/aax-sdk-2-9-0")
+option(COPY_AFTER_BUILD "Copy plugins to system folders after build" ON)
+
+# Minimum macOS version — 10.13 High Sierra for maximum compatibility
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 
 # Add JUCE
 add_subdirectory(JUCE)
 
-# Plugin formats to build
-set(FORMATS VST3 AU AAX Standalone)
+# Plugin formats — platform-specific
+if(APPLE)
+    set(AAX_SDK_PATH "/Users/soda/Documents/aax-sdk-2-9-0")
+    set(FORMATS VST3 AU AAX Standalone)
+elseif(WIN32)
+    set(FORMATS VST3 Standalone)
+else()
+    set(FORMATS VST3 Standalone)
+endif()
 
 # Source files
 set(SOURCE_FILES
@@ -32,11 +41,11 @@ set(SOURCE_FILES
 
 # Create the plugin target
 juce_add_plugin(SodaFilter
-    COMPANY_NAME "MixedBySoda"
+    COMPANY_NAME "Carbinated Audio"
     PLUGIN_MANUFACTURER_CODE Mxbs
     PLUGIN_CODE Soda
     FORMATS ${FORMATS}
-    PRODUCT_NAME "carbonator"
+    PRODUCT_NAME "Carbonator"
 
     # Plugin characteristics
     IS_SYNTH FALSE
@@ -45,8 +54,8 @@ juce_add_plugin(SodaFilter
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
 
-    # Copy to plugin folders
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    # Copy to plugin folders after build (disable with -DCOPY_AFTER_BUILD=OFF on CI)
+    COPY_PLUGIN_AFTER_BUILD ${COPY_AFTER_BUILD}
 
     # Plugin settings
     VST3_CATEGORIES Fx Filter
@@ -57,6 +66,13 @@ juce_add_plugin(SodaFilter
 # Add source files
 target_sources(SodaFilter PRIVATE ${SOURCE_FILES})
 
+# Add binary resources (fonts)
+juce_add_binary_data(SodaFilterBinaryData
+    SOURCES
+        Resources/Pacifico-Regular.ttf
+        Resources/Lobster-Regular.ttf
+)
+
 # Compiler definitions
 target_compile_definitions(SodaFilter
     PUBLIC
@@ -65,14 +81,20 @@ target_compile_definitions(SodaFilter
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_REPORT_APP_USAGE=0
-        JucePlugin_AAXLibs_path="${AAX_SDK_PATH}/Libs"
 )
+
+if(APPLE AND AAX_SDK_PATH)
+    target_compile_definitions(SodaFilter PUBLIC
+        JucePlugin_AAXLibs_path="${AAX_SDK_PATH}/Libs"
+    )
+endif()
 
 # Link libraries
 target_link_libraries(SodaFilter
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
+        SodaFilterBinaryData
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
