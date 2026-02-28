@@ -18,6 +18,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Get version from CMakeLists.txt
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(grep -oP 'project\(SodaFilter VERSION \K[0-9.]+' CMakeLists.txt)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=OFF
 
@@ -32,6 +40,27 @@ jobs:
           cp -r build/SodaFilter_artefacts/Release/VST3/Carbonator.vst3 dist/Windows/VST3/ || true
           cp build/SodaFilter_artefacts/Release/Standalone/Carbonator.exe dist/Windows/Standalone/ || true
 
+      - name: Update Inno Setup version
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          sed -i "s/AppVersion=.*/AppVersion=$VERSION/" installer/windows/carbonator.iss
+          sed -i "s/AppVerName=.*/AppVerName=Carbonator v$VERSION/" installer/windows/carbonator.iss
+          sed -i "s/OutputBaseFilename=.*/OutputBaseFilename=Carbonator-v$VERSION-Windows-Installer/" installer/windows/carbonator.iss
+          sed -i "s/Carbonator v[0-9.]*/Carbonator v$VERSION/g" installer/windows/carbonator.iss
+
+      - name: Remove icon reference if missing
+        shell: bash
+        run: |
+          if [ ! -f "Resources/carbonator-icon.ico" ]; then
+            sed -i '/SetupIconFile/d' installer/windows/carbonator.iss
+          fi
+
+      - name: Build Installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\windows\carbonator.iss
+
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
@@ -44,7 +73,13 @@ jobs:
           name: Carbonator-Windows-Standalone
           path: dist/Windows/Standalone/
 
-      - name: Create Release ZIP
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbonator-Windows-Installer
+          path: dist/Windows/Installer/Carbonator-*.exe
+
+      - name: Create Release ZIP and Installer
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
@@ -55,4 +90,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: Carbonator-Windows.zip
+          files: |
+            Carbonator-Windows.zip
+            dist/Windows/Installer/Carbonator-*.exe
