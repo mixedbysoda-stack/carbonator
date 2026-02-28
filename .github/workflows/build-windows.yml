@@ -22,7 +22,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION=$(grep -oP 'project\(SodaFilter VERSION \K[0-9.]+' CMakeLists.txt)
+          VERSION=$(sed -n 's/^project(SodaFilter VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected version: $VERSION"
 
