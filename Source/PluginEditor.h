@@ -5,6 +5,10 @@
 #include "UI/LookAndFeel/SodaLookAndFeel.h"
 #include "UI/SodaPanel.h"
 
+#ifndef CARBONATOR_DEMO
+ #include "Licensing/ActivationDialog.h"
+#endif
+
 //==============================================================================
 /**
  * Soda Filter Editor
@@ -21,6 +25,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
+    void parentHierarchyChanged() override;
 
 private:
     // Reference to processor
@@ -58,6 +63,10 @@ private:
     std::vector<Bubble> bubbles;
     void generateBubbles();
     void updateBubbles();
+
+#ifndef CARBONATOR_DEMO
+    std::unique_ptr<ActivationDialog> activationDialog;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SodaFilterAudioProcessorEditor)
 };

@@ -53,6 +53,17 @@ SodaFilterAudioProcessorEditor::SodaFilterAudioProcessorEditor (SodaFilterAudioP
 
     // Start timer for animations (60 fps)
     startTimerHz (60);
+
+#ifndef CARBONATOR_DEMO
+    // Show activation dialog if not licensed
+    if (! audioProcessor.isActivated())
+    {
+        activationDialog = std::make_unique<ActivationDialog> (audioProcessor.getLicenseManager());
+        addAndMakeVisible (activationDialog.get());
+        activationDialog->setBounds (getLocalBounds());
+        activationDialog->toFront (true);
+    }
+#endif
 }
 
 void SodaFilterAudioProcessorEditor::generateBubbles()
@@ -110,6 +121,28 @@ SodaFilterAudioProcessorEditor::~SodaFilterAudioProcessorEditor()
     setLookAndFeel (nullptr);
 }
 
+void SodaFilterAudioProcessorEditor::parentHierarchyChanged()
+{
+    juce::AudioProcessorEditor::parentHierarchyChanged();
+
+   #if JUCE_WINDOWS
+    // Force JUCE 8's GDI software renderer instead of the new Direct2D backend.
+    // Direct2D context init crashes on Intel Iris Xe integrated graphics inside
+    // sandboxed plug-in host processes (Bitwig PluginHost, Reaper plug-in
+    // scanner, MuLab) — same class of crash that took out Pour's demo on Win 11
+    // Iris Xe rigs. Software renderer adds negligible CPU cost and is rock-solid
+    // across GPU configs. Applied preemptively to Carbonator so its Windows
+    // demo (which runs a 60 fps bubble animation) never hits the same wall.
+    if (auto* peer = getPeer())
+    {
+        const auto engines = peer->getAvailableRenderingEngines();
+        const int softIdx = engines.indexOf ("Software Renderer");
+        if (softIdx >= 0 && peer->getCurrentRenderingEngine() != softIdx)
+            peer->setCurrentRenderingEngine (softIdx);
+    }
+   #endif
+}
+
 void SodaFilterAudioProcessorEditor::timerCallback()
 {
     // Poll flavor param and update global flavor color
@@ -127,6 +160,21 @@ void SodaFilterAudioProcessorEditor::timerCallback()
 
     if (isCarbonated)
         updateBubbles();
+
+#ifndef CARBONATOR_DEMO
+    // License check #3 (anti-patch scatter) — re-show dialog if state changes
+    if (activationDialog == nullptr && ! audioProcessor.isActivated())
+    {
+        activationDialog = std::make_unique<ActivationDialog> (audioProcessor.getLicenseManager());
+        addAndMakeVisible (activationDialog.get());
+        activationDialog->setBounds (getLocalBounds());
+    }
+    else if (activationDialog != nullptr && audioProcessor.isActivated())
+    {
+        removeChildComponent (activationDialog.get());
+        activationDialog.reset();
+    }
+#endif
 
     // Repaint for liquid animation and bubbles
     repaint();
@@ -217,6 +265,19 @@ void SodaFilterAudioProcessorEditor::paint (juce::Graphics& g)
     g.fillRoundedRectangle (borderBounds, 32.0f);
 
     // Title badge removed — cursive font stands on its own
+
+#ifdef CARBONATOR_DEMO
+    // Demo banner — drawn last so it's on top of everything
+    {
+        auto bannerBounds = getLocalBounds().toFloat().removeFromTop (28.0f);
+        g.setColour (juce::Colour (0xffcc2222));
+        g.fillRect (bannerBounds);
+        g.setColour (juce::Colours::white);
+        g.setFont (juce::Font (14.0f).boldened());
+        g.drawText ("DEMO \xe2\x80\x94 60s preview, then 10s mute \xe2\x80\x94 Buy at carbinatedaudio.com",
+                     bannerBounds, juce::Justification::centred);
+    }
+#endif
 }
 
 void SodaFilterAudioProcessorEditor::toggleTheme()
@@ -240,18 +301,29 @@ void SodaFilterAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (20);
 
+#ifdef CARBONATOR_DEMO
+    constexpr int bannerHeight = 28;
+#else
+    constexpr int bannerHeight = 0;
+#endif
+
     // Theme toggle button (top-right corner, bigger for easier clicking)
-    auto toggleBounds = juce::Rectangle<int> (bounds.getRight() - 50, bounds.getY() + 5, 45, 45);
+    auto toggleBounds = juce::Rectangle<int> (bounds.getRight() - 50, bounds.getY() + 5 + bannerHeight, 45, 45);
     themeToggleButton.setBounds (toggleBounds);
 
     // Title badge (positioned manually in paint)
-    titleLabel.setBounds (bounds.getX(), 35, bounds.getWidth(), 40);
+    titleLabel.setBounds (bounds.getX(), 35 + bannerHeight, bounds.getWidth(), 40);
 
     // Subtitle below badge
-    subtitleLabel.setBounds (bounds.getX(), 80, bounds.getWidth(), 20);
+    subtitleLabel.setBounds (bounds.getX(), 80 + bannerHeight, bounds.getWidth(), 20);
 
     // Main panel takes remaining space
     auto panelBounds = bounds;
     panelBounds.removeFromTop (100);  // Space for header
     sodaPanel.setBounds (panelBounds);
+
+#ifndef CARBONATOR_DEMO
+    if (activationDialog != nullptr)
+        activationDialog->setBounds (getLocalBounds());
+#endif
 }

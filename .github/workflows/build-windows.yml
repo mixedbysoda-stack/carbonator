@@ -8,6 +8,9 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -26,21 +29,24 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected version: $VERSION"
 
+      # Carbonator builds BOTH paid (SodaFilter) + demo (SodaFilterDemo,
+      # CARBONATOR_DEMO=1) targets in a single CMake invocation — see
+      # CMakeLists.txt line 142.
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=OFF
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Collect artifacts
+      # ---------- PAID ARTIFACTS ----------
+      - name: Collect paid artifacts
         shell: bash
         run: |
-          mkdir -p dist/Windows/VST3
-          mkdir -p dist/Windows/Standalone
+          mkdir -p dist/Windows/VST3 dist/Windows/Standalone
           cp -r build/SodaFilter_artefacts/Release/VST3/Carbonator.vst3 dist/Windows/VST3/ || true
           cp build/SodaFilter_artefacts/Release/Standalone/Carbonator.exe dist/Windows/Standalone/ || true
 
-      - name: Update Inno Setup version
+      - name: Update Inno Setup version (paid)
         shell: bash
         run: |
           VERSION=${{ steps.version.outputs.version }}
@@ -56,40 +62,81 @@ jobs:
             sed -i '/SetupIconFile/d' installer/windows/carbonator.iss
           fi
 
-      - name: Build Installer
+      - name: Build Installer (paid)
         shell: cmd
         run: |
           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\windows\carbonator.iss
 
-      - name: Upload VST3
+      # ---------- DEMO ARTIFACTS ----------
+      - name: Collect demo artifacts
+        shell: bash
+        run: |
+          mkdir -p dist/Windows-Demo/VST3 dist/Windows-Demo/Standalone
+          # Demo target's PRODUCT_NAME is "Carbonator Demo" so artifact filename matches
+          cp -r "build/SodaFilterDemo_artefacts/Release/VST3/Carbonator Demo.vst3" dist/Windows-Demo/VST3/ || true
+          cp "build/SodaFilterDemo_artefacts/Release/Standalone/Carbonator Demo.exe" dist/Windows-Demo/Standalone/ || true
+
+      - name: Build Demo Installer (Inno)
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          cp installer/windows/carbonator.iss installer/windows/carbonator-demo.iss
+          sed -i "s|dist\\\\Windows\\\\VST3|dist\\\\Windows-Demo\\\\VST3|g" installer/windows/carbonator-demo.iss
+          sed -i "s|dist\\\\Windows\\\\Standalone|dist\\\\Windows-Demo\\\\Standalone|g" installer/windows/carbonator-demo.iss
+          sed -i "s|Carbonator\\.vst3|Carbonator Demo.vst3|g" installer/windows/carbonator-demo.iss
+          sed -i "s|Carbonator\\.exe|Carbonator Demo.exe|g" installer/windows/carbonator-demo.iss
+          sed -i "s|AppName=Carbonator|AppName=Carbonator Demo|" installer/windows/carbonator-demo.iss
+          sed -i "s|DefaultDirName={commonpf64}\\\\Carbinated Audio\\\\Carbonator|DefaultDirName={commonpf64}\\\\Carbinated Audio\\\\Carbonator Demo|" installer/windows/carbonator-demo.iss
+          sed -i "s/OutputBaseFilename=.*/OutputBaseFilename=Carbonator-v$VERSION-Demo-Windows-Installer/" installer/windows/carbonator-demo.iss
+
+      - name: Build Installer (demo)
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\windows\carbonator-demo.iss
+
+      # ---------- UPLOAD ARTIFACTS ----------
+      - name: Upload paid VST3
         uses: actions/upload-artifact@v4
         with:
           name: Carbonator-Windows-VST3
           path: dist/Windows/VST3/
 
-      - name: Upload Standalone
+      - name: Upload paid Standalone
         uses: actions/upload-artifact@v4
         with:
           name: Carbonator-Windows-Standalone
           path: dist/Windows/Standalone/
 
-      - name: Upload Installer
+      - name: Upload paid Installer
         uses: actions/upload-artifact@v4
         with:
           name: Carbonator-Windows-Installer
-          path: dist/Windows/Installer/Carbonator-*.exe
+          path: dist/Windows/Installer/Carbonator-v*-Windows-Installer.exe
 
-      - name: Create Release ZIP and Installer
+      - name: Upload demo Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbonator-Demo-Windows-Installer
+          path: dist/Windows/Installer/Carbonator-v*-Demo-Windows-Installer.exe
+
+      # ---------- RELEASE ----------
+      - name: Zip paid artifacts
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          cd dist/Windows
-          7z a -tzip ../../Carbonator-Windows.zip VST3/ Standalone/
+          cd dist/Windows && 7z a -tzip ../../Carbonator-Windows.zip VST3/ Standalone/
 
-      - name: Upload Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Upload paid Release (non-demo tags)
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'demo')
         uses: softprops/action-gh-release@v2
         with:
           files: |
             Carbonator-Windows.zip
-            dist/Windows/Installer/Carbonator-*.exe
+            dist/Windows/Installer/Carbonator-v*-Windows-Installer.exe
+
+      - name: Upload demo Release (demo tags)
+        if: contains(github.ref, 'demo')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/Windows/Installer/Carbonator-v*-Demo-Windows-Installer.exe
