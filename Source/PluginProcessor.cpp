@@ -19,6 +19,12 @@ SodaFilterAudioProcessor::SodaFilterAudioProcessor()
 {
     // Create effects chain
     effectsChain = std::make_unique<EffectsChain>(apvts);
+
+#ifndef CARBONATOR_DEMO
+    // Licensing — must be after effectsChain creation
+    licenseManager = std::make_unique<LicenseManager>();
+    effectsChain->setLicenseFlag (licenseManager->getActivatedFlagPtr());
+#endif
 }
 
 SodaFilterAudioProcessor::~SodaFilterAudioProcessor()
@@ -145,6 +151,12 @@ void SodaFilterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     // Clear any output channels that didn't contain input data
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+
+    // License check #1 — dry pass-through when unlicensed
+#ifndef CARBONATOR_DEMO
+    if (!licenseManager->isActivated())
+        return;
+#endif
 
     // Process through effects chain
     juce::dsp::AudioBlock<float> block (buffer);

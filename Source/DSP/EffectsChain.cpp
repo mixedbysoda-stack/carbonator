@@ -32,6 +32,14 @@ void EffectsChain::prepare (const juce::dsp::ProcessSpec& spec)
     autoGainCompensation.setCurrentAndTargetValue (1.0f);
     inputRMS = 0.0f;
     outputRMS = 0.0f;
+
+#ifdef CARBONATOR_DEMO
+    playDurationSamples = static_cast<int> (spec.sampleRate * 60.0);
+    muteDurationSamples = static_cast<int> (spec.sampleRate * 10.0);
+    sampleCounter = 0;
+    muteCounter = 0;
+    isMuted = false;
+#endif
 }
 
 void EffectsChain::process (juce::dsp::ProcessContextReplacing<float>& context)
@@ -65,6 +73,16 @@ void EffectsChain::process (juce::dsp::ProcessContextReplacing<float>& context)
 
     // 3. Process through flavor DSP
     flavorProcessor.process (context);
+
+#ifndef CARBONATOR_DEMO
+    // License check #2 (anti-patch scatter) — clears audio if unlicensed
+    if (licenseFlag != nullptr && ! licenseFlag->load (std::memory_order_relaxed))
+    {
+        for (size_t ch = 0; ch < nChannels; ++ch)
+            juce::FloatVectorOperations::clear (block.getChannelPointer (ch), static_cast<int> (nSamples));
+        return;
+    }
+#endif
 
     // 4. Measure output RMS
     {
@@ -105,6 +123,54 @@ void EffectsChain::process (juce::dsp::ProcessContextReplacing<float>& context)
 
     outputGain.process (context);
     outputLimiter.process (context);
+
+#ifdef CARBONATOR_DEMO
+    // Demo mute cycle: 60s play, 10s mute with smooth crossfade
+    for (size_t i = 0; i < nSamples; ++i)
+    {
+        float gain = 1.0f;
+
+        if (! isMuted)
+        {
+            ++sampleCounter;
+            if (sampleCounter >= playDurationSamples)
+            {
+                // Entering mute phase
+                isMuted = true;
+                muteCounter = 0;
+            }
+            else if (sampleCounter > playDurationSamples - fadeSamples)
+            {
+                // Fade out: last fadeSamples of play phase
+                int fadePos = sampleCounter - (playDurationSamples - fadeSamples);
+                gain = 1.0f - static_cast<float> (fadePos) / static_cast<float> (fadeSamples);
+            }
+        }
+        else
+        {
+            ++muteCounter;
+            if (muteCounter >= muteDurationSamples)
+            {
+                // Exiting mute phase
+                isMuted = false;
+                sampleCounter = 0;
+            }
+            else if (muteCounter > muteDurationSamples - fadeSamples)
+            {
+                // Fade in: last fadeSamples of mute phase
+                int fadePos = muteCounter - (muteDurationSamples - fadeSamples);
+                gain = static_cast<float> (fadePos) / static_cast<float> (fadeSamples);
+            }
+            else
+            {
+                gain = 0.0f;
+            }
+        }
+
+        for (size_t ch = 0; ch < nChannels; ++ch)
+            block.getChannelPointer (ch)[i] *= gain;
+    }
+#endif
 }
 
 void EffectsChain::reset()
@@ -115,6 +181,12 @@ void EffectsChain::reset()
     autoGainCompensation.setCurrentAndTargetValue (1.0f);
     inputRMS = 0.0f;
     outputRMS = 0.0f;
+
+#ifdef CARBONATOR_DEMO
+    sampleCounter = 0;
+    muteCounter = 0;
+    isMuted = false;
+#endif
 }
 
 float EffectsChain::getLatencyInSamples() const

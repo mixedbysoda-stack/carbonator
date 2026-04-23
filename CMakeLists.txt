@@ -69,7 +69,11 @@ juce_add_plugin(SodaFilter
 )
 
 # Add source files
-target_sources(SodaFilter PRIVATE ${SOURCE_FILES})
+target_sources(SodaFilter PRIVATE
+    ${SOURCE_FILES}
+    Source/Licensing/LicenseManager.cpp
+    Source/Licensing/ActivationDialog.cpp
+)
 
 # Add binary resources (fonts)
 juce_add_binary_data(SodaFilterBinaryData
@@ -99,6 +103,7 @@ target_link_libraries(SodaFilter
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
+        juce::juce_cryptography
         SodaFilterBinaryData
     PUBLIC
         juce::juce_recommended_config_flags
@@ -128,4 +133,75 @@ if(MSVC)
     set_property(TARGET SodaFilterBinaryData PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     target_compile_options(SodaFilter PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# ==============================================================================
+# Demo build — same DSP, same UI, with 60s play / 10s mute cycle
+# ==============================================================================
+
+juce_add_plugin(SodaFilterDemo
+    COMPANY_NAME "Carbinated Audio"
+    PLUGIN_MANUFACTURER_CODE Mxbs
+    PLUGIN_CODE SodD
+    FORMATS ${FORMATS}
+    PRODUCT_NAME "Carbonator Demo"
+
+    IS_SYNTH FALSE
+    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_OUTPUT FALSE
+    IS_MIDI_EFFECT FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+
+    COPY_PLUGIN_AFTER_BUILD OFF
+
+    VST3_CATEGORIES Fx Filter
+    AU_MAIN_TYPE kAudioUnitType_Effect
+    AAX_CATEGORY AAX_ePlugInCategory_Effect
+)
+
+target_sources(SodaFilterDemo PRIVATE ${SOURCE_FILES})
+
+target_compile_definitions(SodaFilterDemo
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_DISPLAY_SPLASH_SCREEN=0
+        JUCE_REPORT_APP_USAGE=0
+        CARBONATOR_DEMO=1
+)
+
+if(APPLE AND AAX_SDK_PATH)
+    target_compile_definitions(SodaFilterDemo PUBLIC
+        JucePlugin_AAXLibs_path="${AAX_SDK_PATH}/Libs"
+    )
+endif()
+
+target_link_libraries(SodaFilterDemo
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_dsp
+        SodaFilterBinaryData
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
+
+target_include_directories(SodaFilterDemo
+    PRIVATE
+        Source
+)
+
+if(APPLE)
+    set_target_properties(SodaFilterDemo PROPERTIES
+        OSX_ARCHITECTURES "arm64;x86_64"
+    )
+endif()
+
+if(MSVC)
+    target_compile_options(SodaFilterDemo PRIVATE /W4)
+    set_property(TARGET SodaFilterDemo PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    target_compile_options(SodaFilterDemo PRIVATE -Wall -Wextra -Wpedantic)
 endif()

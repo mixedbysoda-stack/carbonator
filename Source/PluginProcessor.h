@@ -4,6 +4,10 @@
 #include "DSP/EffectsChain.h"
 #include "Parameters/ParameterIDs.h"
 
+#ifndef CARBONATOR_DEMO
+ #include "Licensing/LicenseManager.h"
+#endif
+
 //==============================================================================
 /**
  * Soda Filter Audio Processor
@@ -58,6 +62,11 @@ public:
     // Undo/Redo functionality
     juce::UndoManager& getUndoManager() { return undoManager; }
 
+#ifndef CARBONATOR_DEMO
+    bool isActivated() const { return licenseManager->isActivated(); }
+    LicenseManager& getLicenseManager() { return *licenseManager; }
+#endif
+
 private:
     //==============================================================================
     // Parameter management
@@ -67,6 +76,11 @@ private:
 
     // DSP processing chain
     std::unique_ptr<EffectsChain> effectsChain;
+
+#ifndef CARBONATOR_DEMO
+    // Licensing
+    std::unique_ptr<LicenseManager> licenseManager;
+#endif
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SodaFilterAudioProcessor)

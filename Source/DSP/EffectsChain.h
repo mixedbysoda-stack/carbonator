@@ -24,6 +24,11 @@ public:
     /** Set quality mode (oversampling on/off) */
     void setQualityMode (bool hq);
 
+#ifndef CARBONATOR_DEMO
+    /** Set pointer to license activated flag (audio-thread safe read) */
+    void setLicenseFlag (const std::atomic<bool>* flag) { licenseFlag = flag; }
+#endif
+
 private:
     juce::AudioProcessorValueTreeState& apvts;
 
@@ -47,6 +52,20 @@ private:
     juce::AudioParameterFloat* fizzAmountParam;
     juce::AudioParameterBool* carbonatedParam;
     juce::AudioParameterBool* qualityModeParam;
+
+#ifndef CARBONATOR_DEMO
+    const std::atomic<bool>* licenseFlag = nullptr;
+#endif
+
+#ifdef CARBONATOR_DEMO
+    // Demo mute cycle: 60s play, 10s mute
+    int sampleCounter = 0;
+    int muteCounter = 0;
+    int playDurationSamples = 0;
+    int muteDurationSamples = 0;
+    bool isMuted = false;
+    static constexpr int fadeSamples = 2048;  // ~46ms crossfade to avoid clicks
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EffectsChain)
 };
